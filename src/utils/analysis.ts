@@ -1,4 +1,3 @@
-
 import { CandleData, MarketData, NewsItem, FundamentalData } from "./marketData";
 
 export type TradeSignal = "strong_buy" | "buy" | "neutral" | "sell" | "strong_sell";
@@ -405,24 +404,55 @@ export const generateSignal = (
   else if (combinedScore >= 20) signal = "sell";
   else signal = "strong_sell";
   
-  // Calculate support and resistance
+  // Calculate support and resistance (scaled appropriately for the asset price)
   const prices = candles.map(c => c.close);
   const max = Math.max(...prices);
   const min = Math.min(...prices);
   const range = max - min;
   
   const currentPrice = marketData.price;
-  const support = currentPrice - (range * 0.1);
-  const resistance = currentPrice + (range * 0.15);
+  
+  // Scale support and resistance calculations based on price magnitude
+  let supportPercentage, resistancePercentage, stopLossPercentage, targetPercentage;
+  
+  // Adjust percentages based on asset type and price magnitude
+  if (symbol.includes("BTC")) {
+    // Bitcoin has higher volatility but also much higher price, scale percentages
+    supportPercentage = 0.02;
+    resistancePercentage = 0.03;
+    stopLossPercentage = 0.015;
+    targetPercentage = 0.05;
+  } else if (symbol.includes("ETH") || currentPrice > 1000) {
+    // High-price assets get moderate volatility percentages
+    supportPercentage = 0.03;
+    resistancePercentage = 0.045;
+    stopLossPercentage = 0.02;
+    targetPercentage = 0.07;
+  } else if (symbol.includes("USD") || symbol.includes("EUR") || symbol.includes("GBP")) {
+    // Forex has very low volatility
+    supportPercentage = 0.005;
+    resistancePercentage = 0.0075;
+    stopLossPercentage = 0.003;
+    targetPercentage = 0.01;
+  } else {
+    // Regular stocks
+    supportPercentage = 0.05;
+    resistancePercentage = 0.075;
+    stopLossPercentage = 0.04;
+    targetPercentage = 0.1;
+  }
+  
+  const support = currentPrice * (1 - supportPercentage);
+  const resistance = currentPrice * (1 + resistancePercentage);
   
   // Calculate stop loss and target using ICT concepts
   const stopLoss = signal === "strong_buy" || signal === "buy" 
-    ? currentPrice - (range * 0.07) // Just below the discount zone
-    : currentPrice + (range * 0.07); // Just above the premium zone
+    ? currentPrice * (1 - stopLossPercentage) // Just below the discount zone
+    : currentPrice * (1 + stopLossPercentage); // Just above the premium zone
     
   const targetPrice = signal === "strong_buy" || signal === "buy"
-    ? currentPrice + (range * 0.21) // Optimal profit taking zone
-    : currentPrice - (range * 0.21);
+    ? currentPrice * (1 + targetPercentage) // Optimal profit taking zone
+    : currentPrice * (1 - targetPercentage);
   
   // Calculate risk/reward ratio
   const risk = Math.abs(currentPrice - stopLoss);

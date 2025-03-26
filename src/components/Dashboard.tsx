@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -23,6 +24,7 @@ const Dashboard: React.FC = () => {
   const [signal, setSignal] = useState<AnalysisResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [marketType, setMarketType] = useState<MarketType>("stocks");
+  const [currentTimeframe, setCurrentTimeframe] = useState("1D");
   
   useEffect(() => {
     loadMarketData(marketType);
@@ -33,13 +35,14 @@ const Dashboard: React.FC = () => {
     setMarkets(marketData);
     
     if (marketData.length > 0) {
-      const initialSymbol = marketData[0].symbol;
+      // Set initial symbol based on market type
+      const initialSymbol = type === "crypto" ? "BTCUSD" : marketData[0].symbol;
       setActiveSymbol(initialSymbol);
-      generateSignalForSymbol(initialSymbol, marketData);
+      generateSignalForSymbol(initialSymbol, marketData, currentTimeframe);
     }
   };
   
-  const generateSignalForSymbol = (symbol: string, currentMarkets: MarketData[] = markets) => {
+  const generateSignalForSymbol = (symbol: string, currentMarkets: MarketData[] = markets, timeframe: string = currentTimeframe) => {
     setLoading(true);
     setTimeout(() => {
       const marketData = currentMarkets.find(m => m.symbol === symbol) || currentMarkets[0];
@@ -53,7 +56,7 @@ const Dashboard: React.FC = () => {
         return;
       }
       
-      const candles = getCandleData(symbol, "1M");
+      const candles = getCandleData(symbol, timeframe);
       const fundamentalData = getFundamentalData(symbol);
       const newsData = getNewsData();
       
@@ -63,7 +66,7 @@ const Dashboard: React.FC = () => {
         candles,
         fundamentalData,
         newsData,
-        "1M"
+        timeframe
       );
       
       setSignal(generatedSignal);
@@ -80,16 +83,16 @@ const Dashboard: React.FC = () => {
   
   useEffect(() => {
     if (activeSymbol) {
-      generateSignalForSymbol(activeSymbol);
+      generateSignalForSymbol(activeSymbol, markets, currentTimeframe);
     }
-  }, [activeSymbol]);
+  }, [activeSymbol, currentTimeframe]);
   
   const refreshData = () => {
     setLoading(true);
     setTimeout(() => {
       const newMarkets = getMarketData(marketType);
       setMarkets(newMarkets);
-      generateSignalForSymbol(activeSymbol, newMarkets);
+      generateSignalForSymbol(activeSymbol, newMarkets, currentTimeframe);
       setLoading(false);
       
       toast({
@@ -111,6 +114,11 @@ const Dashboard: React.FC = () => {
       title: `${type.charAt(0).toUpperCase() + type.slice(1)} Markets`,
       description: `Switched to ${type} market view`,
     });
+  };
+
+  const handleTimeframeChange = (newTimeframe: string) => {
+    setCurrentTimeframe(newTimeframe);
+    // Signal will be regenerated via the useEffect that watches activeSymbol and currentTimeframe
   };
   
   const filteredMarkets = markets.filter(market => 
@@ -229,6 +237,8 @@ const Dashboard: React.FC = () => {
               price={activeMarket.price}
               change={activeMarket.change}
               changePercent={activeMarket.changePercent}
+              onTimeframeChange={handleTimeframeChange}
+              currentTimeframe={currentTimeframe}
             />
           )}
           

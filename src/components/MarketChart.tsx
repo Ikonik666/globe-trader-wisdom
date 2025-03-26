@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -18,6 +17,8 @@ interface MarketChartProps {
   price: number;
   change: number;
   changePercent: number;
+  onTimeframeChange?: (timeframe: string) => void;
+  currentTimeframe?: string;
 }
 
 const MarketChart: React.FC<MarketChartProps> = ({ 
@@ -25,9 +26,11 @@ const MarketChart: React.FC<MarketChartProps> = ({
   name,
   price,
   change,
-  changePercent 
+  changePercent,
+  onTimeframeChange,
+  currentTimeframe = "1D"
 }) => {
-  const [timeframe, setTimeframe] = useState("1D");
+  const [timeframe, setTimeframe] = useState(currentTimeframe);
   const [chartType, setChartType] = useState("candle");
   const [chartData, setChartData] = useState<CandleData[]>([]);
   const [patterns, setPatterns] = useState<PatternDetection[]>([]);
@@ -38,16 +41,19 @@ const MarketChart: React.FC<MarketChartProps> = ({
   const chartRef = useRef<HTMLDivElement>(null);
   
   useEffect(() => {
-    // Fetch chart data based on selected timeframe
+    if (currentTimeframe && currentTimeframe !== timeframe) {
+      setTimeframe(currentTimeframe);
+    }
+  }, [currentTimeframe]);
+  
+  useEffect(() => {
     const data = getCandleData(symbol, timeframe);
     setChartData(data);
     
-    // Get technical patterns with ICT/SMC focus that respects the current timeframe
     const detectedPatterns = analyzeTechnicalPatterns(symbol, data, timeframe);
     setPatterns(detectedPatterns);
     
     if (detectedPatterns.length > 0) {
-      // Notify user about important patterns only on timeframe change
       const significantPattern = detectedPatterns.find(p => p.confidence > 75);
       if (significantPattern) {
         toast({
@@ -58,6 +64,13 @@ const MarketChart: React.FC<MarketChartProps> = ({
       }
     }
   }, [symbol, timeframe]);
+
+  const handleTimeframeChange = (newTimeframe: string) => {
+    setTimeframe(newTimeframe);
+    if (onTimeframeChange) {
+      onTimeframeChange(newTimeframe);
+    }
+  };
 
   const formatTimeLabel = (timestamp: number) => {
     const date = new Date(timestamp);
@@ -130,15 +143,12 @@ const MarketChart: React.FC<MarketChartProps> = ({
 
   const changeMarketType = (type: MarketType) => {
     setMarketType(type);
-    // Note: the parent component (Dashboard) should handle the actual data change
-    // This is just a UI indication
     toast({
       title: `Switched to ${type.charAt(0).toUpperCase() + type.slice(1)}`,
       description: `Now viewing ${type} markets`,
     });
   };
 
-  // Convert timeframe to a more readable format for display
   const getTimeframeDisplay = (tf: string): string => {
     switch(tf) {
       case "1m": return "1 Minute";
@@ -201,7 +211,7 @@ const MarketChart: React.FC<MarketChartProps> = ({
               Forex
             </Button>
           </div>
-          <Select value={timeframe} onValueChange={setTimeframe}>
+          <Select value={timeframe} onValueChange={handleTimeframeChange}>
             <SelectTrigger className="w-24 h-8 text-xs">
               <SelectValue placeholder="Timeframe" />
             </SelectTrigger>

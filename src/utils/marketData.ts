@@ -72,13 +72,13 @@ const stocksData: MarketData[] = [
 ];
 
 const cryptoData: MarketData[] = [
-  { symbol: "BTCUSD", name: "Bitcoin/USD", price: 64287.32, change: 1257.41, changePercent: 1.99, volume: 28761245 },
-  { symbol: "ETHUSD", name: "Ethereum/USD", price: 3456.78, change: 78.45, changePercent: 2.32, volume: 18954321 },
-  { symbol: "XRPUSD", name: "Ripple/USD", price: 0.5432, change: -0.0134, changePercent: -2.41, volume: 9876543 },
+  { symbol: "BTCUSD", name: "Bitcoin/USD", price: 87196.00, change: -240.00, changePercent: -0.27, volume: 28761245 },
+  { symbol: "ETHUSD", name: "Ethereum/USD", price: 2010.80, change: -55.70, changePercent: -2.70, volume: 18954321 },
+  { symbol: "XRPUSD", name: "Ripple/USD", price: 0.54, change: -0.01, changePercent: -2.41, volume: 9876543 },
   { symbol: "LTCUSD", name: "Litecoin/USD", price: 87.65, change: 1.23, changePercent: 1.42, volume: 5432167 },
-  { symbol: "ADAUSD", name: "Cardano/USD", price: 0.4321, change: 0.0087, changePercent: 2.06, volume: 7654321 },
+  { symbol: "ADAUSD", name: "Cardano/USD", price: 0.43, change: 0.01, changePercent: 2.06, volume: 7654321 },
   { symbol: "DOTUSD", name: "Polkadot/USD", price: 6.78, change: -0.12, changePercent: -1.74, volume: 3456789 },
-  { symbol: "DOGEUSD", name: "Dogecoin/USD", price: 0.1234, change: 0.0056, changePercent: 4.76, volume: 9876543 },
+  { symbol: "DOGEUSD", name: "Dogecoin/USD", price: 0.12, change: 0.01, changePercent: 4.76, volume: 9876543 },
   { symbol: "SOLUSD", name: "Solana/USD", price: 140.25, change: 7.68, changePercent: 5.79, volume: 6543219 },
 ];
 
