@@ -1,4 +1,3 @@
-
 import { CandleData, MarketData, NewsItem, FundamentalData } from "./marketData";
 
 export type TradeSignal = "strong_buy" | "buy" | "neutral" | "sell" | "strong_sell";
@@ -28,64 +27,126 @@ export interface PatternDetection {
   description: string;
 }
 
+// ICT/SMC Pattern Names
+const bullishSMCPatterns = [
+  "Bullish Order Block", 
+  "Fair Value Gap Up", 
+  "Bullish Breaker", 
+  "Liquidity Sweep Above", 
+  "Bullish Mitigation Block",
+  "Optimal Trade Entry (OTE)",
+  "Discount Zone",
+  "Imbalance Up",
+  "Equal Highs Taken",
+  "Premium Zone Reversal",
+  "Bullish BOS (Break of Structure)",
+  "Smart Money Entry Point"
+];
+
+const bearishSMCPatterns = [
+  "Bearish Order Block", 
+  "Fair Value Gap Down", 
+  "Bearish Breaker", 
+  "Liquidity Sweep Below", 
+  "Bearish Mitigation Block",
+  "Raid Level",
+  "Premium Zone",
+  "Imbalance Down",
+  "Equal Lows Taken",
+  "Discount Zone Reversal",
+  "Bearish BOS (Break of Structure)",
+  "Market Maker Intent"
+];
+
+// Pattern descriptions
+const smcDescriptions = {
+  "Bullish Order Block": "Previous supply zone flipped to demand zone with strong momentum. Institutional buying detected at this key level.",
+  "Fair Value Gap Up": "Price imbalance identified with institutional interest to the upside. Gap in price that's likely to be filled with upward movement.",
+  "Bullish Breaker": "Previous resistance broken and retested as support. Strong signal of ongoing bullish momentum.",
+  "Liquidity Sweep Above": "Sweep of liquidity above resistance before expected continuation. Smart money has collected retail stop losses.",
+  "Bullish Mitigation Block": "Previous resistance level mitigated and now serving as support for further upside movement.",
+  "Optimal Trade Entry (OTE)": "Price has reached the institutional entry zone where smart money typically engages in the market.",
+  "Discount Zone": "Price has reached a significant discount area where institutional buying is likely to occur.",
+  "Imbalance Up": "Significant price imbalance detected with institutional buying pressure evident in candle structure.",
+  "Equal Highs Taken": "Equal highs have been taken out, indicating smart money manipulation before reversal.",
+  "Premium Zone Reversal": "Price has reached an overextended level and showing reversal signs from the premium zone.",
+  "Bullish BOS (Break of Structure)": "Clear break of market structure to the upside, indicating a change in trend direction.",
+  "Smart Money Entry Point": "Key level where institutional money is likely entering the market for a bullish move.",
+  
+  "Bearish Order Block": "Previous demand zone flipped to supply zone with strong momentum. Institutional selling detected at this key level.",
+  "Fair Value Gap Down": "Price imbalance identified with institutional interest to the downside. Gap in price that's likely to be filled with downward movement.",
+  "Bearish Breaker": "Previous support broken and retested as resistance. Strong signal of ongoing bearish momentum.",
+  "Liquidity Sweep Below": "Sweep of liquidity below support before expected continuation. Smart money has collected retail stop losses.",
+  "Bearish Mitigation Block": "Previous support level mitigated and now serving as resistance for further downside movement.",
+  "Raid Level": "Key level where price has been manipulated before a significant move, typically to trap retail traders.",
+  "Premium Zone": "Price has reached a significant premium area where institutional selling is likely to occur.",
+  "Imbalance Down": "Significant price imbalance detected with institutional selling pressure evident in candle structure.",
+  "Equal Lows Taken": "Equal lows have been taken out, indicating smart money manipulation before reversal.",
+  "Discount Zone Reversal": "Price has reached an overextended level to the downside and showing reversal signs from the discount zone.",
+  "Bearish BOS (Break of Structure)": "Clear break of market structure to the downside, indicating a change in trend direction.",
+  "Market Maker Intent": "Key level where market makers are showing their hand for a potential bearish move."
+};
+
+// Timeframes used in ICT/SMC analysis
+const ictTimeframes = ["M15", "H1", "H4", "D1", "W1"];
+
 // Analyze technical patterns including ICT concepts
 export const analyzeTechnicalPatterns = (
   symbol: string,
   candles: CandleData[]
 ): PatternDetection[] => {
+  if (!candles || candles.length === 0) {
+    return [];
+  }
+  
   // This would normally use sophisticated algorithms to detect ICT/SMC patterns
   // For demo, returning mock pattern detections
   
   const lastCandle = candles[candles.length - 1];
   const mockPatterns: PatternDetection[] = [];
   
-  // Simulate some ICT/SMC pattern detections
-  if (lastCandle.close > lastCandle.open) {
-    mockPatterns.push({
-      name: "Bullish Order Block",
-      timeframe: "H4",
-      confidence: 78,
-      bullish: true,
-      description: "Previous supply zone flipped to demand zone with strong momentum"
-    });
+  // Determine if the general trend is bullish or bearish
+  const isBullishTrend = lastCandle.close > lastCandle.open;
+  
+  // Select appropriate patterns based on trend
+  const patterns = isBullishTrend ? bullishSMCPatterns : bearishSMCPatterns;
+  
+  // Generate 2-4 patterns (more realistic)
+  const numPatterns = 2 + Math.floor(Math.random() * 3);
+  
+  // Create a shuffle to randomize the pattern selection
+  const shuffledPatterns = [...patterns].sort(() => Math.random() - 0.5);
+  const selectedPatterns = shuffledPatterns.slice(0, numPatterns);
+  
+  // Create patterns with various confidence levels
+  selectedPatterns.forEach((patternName) => {
+    const timeframe = ictTimeframes[Math.floor(Math.random() * ictTimeframes.length)];
     
     mockPatterns.push({
-      name: "Fair Value Gap",
-      timeframe: "H1",
-      confidence: 85,
-      bullish: true,
-      description: "Price imbalance identified with institutional interest"
+      name: patternName,
+      timeframe: timeframe,
+      confidence: 65 + Math.floor(Math.random() * 25), // 65-90% confidence
+      bullish: isBullishTrend,
+      description: smcDescriptions[patternName as keyof typeof smcDescriptions] || 
+                 "ICT/SMC pattern detected based on institutional order flow."
     });
-  } else {
-    mockPatterns.push({
-      name: "Bearish Breaker Block",
-      timeframe: "D1",
-      confidence: 82,
-      bullish: false,
-      description: "Institutional price rejection at liquidity grab level"
-    });
-    
-    mockPatterns.push({
-      name: "Bearish Order Block",
-      timeframe: "H4",
-      confidence: 75,
-      bullish: false,
-      description: "Previous demand zone flipped to supply with strong momentum"
-    });
-  }
+  });
   
-  // Add some randomness to make it more realistic
-  if (Math.random() > 0.5) {
-    mockPatterns.push({
-      name: Math.random() > 0.5 ? "Liquidity Sweep" : "Inducement Sweep",
-      timeframe: "M15",
-      confidence: 65 + Math.floor(Math.random() * 20),
-      bullish: Math.random() > 0.4,
-      description: "Sweep of liquidity before expected reversal"
-    });
-  }
+  // Add one opposite pattern for realism (e.g., a bearish pattern in bullish trend)
+  const oppositePatterns = isBullishTrend ? bearishSMCPatterns : bullishSMCPatterns;
+  const oppositePattern = oppositePatterns[Math.floor(Math.random() * oppositePatterns.length)];
   
-  return mockPatterns;
+  mockPatterns.push({
+    name: oppositePattern,
+    timeframe: ictTimeframes[Math.floor(Math.random() * ictTimeframes.length)],
+    confidence: 50 + Math.floor(Math.random() * 20), // Less confident (50-70%)
+    bullish: !isBullishTrend,
+    description: smcDescriptions[oppositePattern as keyof typeof smcDescriptions] || 
+               "Conflicting pattern detected, suggesting caution."
+  });
+  
+  // Sort by confidence (highest first)
+  return mockPatterns.sort((a, b) => b.confidence - a.confidence);
 };
 
 // Analyze market sentiment from news
@@ -193,6 +254,24 @@ export const generateSignal = (
   fundData: FundamentalData,
   news: NewsItem[]
 ): AnalysisResult => {
+  if (!marketData || !candles || candles.length === 0) {
+    // Default signal for error cases
+    return {
+      symbol,
+      signal: "neutral",
+      confidence: 50,
+      source: "technical", 
+      timeFrame: "medium",
+      reasoning: ["Insufficient data to generate accurate signals"],
+      support: 0,
+      resistance: 0,
+      stopLoss: 0,
+      targetPrice: 0,
+      riskRewardRatio: 1.0,
+      timestamp: Date.now()
+    };
+  }
+
   const technicalPatterns = analyzeTechnicalPatterns(symbol, candles);
   const sentiment = analyzeSentiment(news);
   const fundamentals = analyzeFundamentals(fundData);
@@ -236,13 +315,13 @@ export const generateSignal = (
   const support = currentPrice - (range * 0.1);
   const resistance = currentPrice + (range * 0.15);
   
-  // Calculate stop loss and target
+  // Calculate stop loss and target using ICT concepts
   const stopLoss = signal === "strong_buy" || signal === "buy" 
-    ? currentPrice - (range * 0.07)
-    : currentPrice + (range * 0.07);
+    ? currentPrice - (range * 0.07) // Just below the discount zone
+    : currentPrice + (range * 0.07); // Just above the premium zone
     
   const targetPrice = signal === "strong_buy" || signal === "buy"
-    ? currentPrice + (range * 0.21)
+    ? currentPrice + (range * 0.21) // Optimal profit taking zone
     : currentPrice - (range * 0.21);
   
   // Calculate risk/reward ratio
@@ -250,18 +329,31 @@ export const generateSignal = (
   const reward = Math.abs(targetPrice - currentPrice);
   const riskRewardRatio = reward / risk;
   
-  // Generate reasoning
+  // Generate reasoning with ICT/SMC terminology
   const reasoning: string[] = [];
   
-  // Add technical reasoning
+  // Add technical reasoning with SMC focus
   const bullishPatterns = technicalPatterns.filter(p => p.bullish);
   const bearishPatterns = technicalPatterns.filter(p => !p.bullish);
   
-  if (bullishPatterns.length > bearishPatterns.length) {
-    reasoning.push(`Technical analysis shows ${bullishPatterns.length} bullish patterns including ${bullishPatterns[0]?.name}`);
-  } else if (bearishPatterns.length > 0) {
-    reasoning.push(`Technical analysis shows ${bearishPatterns.length} bearish patterns including ${bearishPatterns[0]?.name}`);
+  if (bullishPatterns.length > 0) {
+    reasoning.push(`SMC analysis shows ${bullishPatterns.length} bullish patterns including ${bullishPatterns[0]?.name} on ${bullishPatterns[0]?.timeframe} timeframe`);
+    if (bullishPatterns[0]) {
+      reasoning.push(bullishPatterns[0].description);
+    }
   }
+  
+  if (bearishPatterns.length > 0) {
+    reasoning.push(`SMC analysis shows ${bearishPatterns.length} bearish patterns including ${bearishPatterns[0]?.name} on ${bearishPatterns[0]?.timeframe} timeframe`);
+    if (signal === "sell" || signal === "strong_sell") {
+      if (bearishPatterns[0]) {
+        reasoning.push(bearishPatterns[0].description);
+      }
+    }
+  }
+  
+  // Add market structure analysis
+  reasoning.push(`Market structure shows ${signal.includes('buy') ? 'bullish' : signal.includes('sell') ? 'bearish' : 'neutral'} bias with ${signal.includes('strong') ? 'strong' : 'moderate'} confirmation`);
   
   // Add fundamental reasoning
   reasoning.push(`Fundamental outlook is ${fundamentals.outlook} (${Math.round(fundamentals.score)}/100)`);

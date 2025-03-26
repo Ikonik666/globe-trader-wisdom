@@ -13,7 +13,9 @@ import SignalCard from './SignalCard';
 import MarketChart from './MarketChart';
 import FundamentalData from './FundamentalData';
 import NewsCard from './NewsCard';
-import { Search, RefreshCcw, ArrowDownUp } from 'lucide-react';
+import { toast } from "@/components/ui/use-toast";
+import { Search, RefreshCcw, ArrowDownUp, Bitcoin, CurrencyDollar, BarChart, TrendingUp } from 'lucide-react';
+import { MarketType, getSymbolsByMarketType } from '@/utils/marketSymbols';
 
 const Dashboard: React.FC = () => {
   const [markets, setMarkets] = useState<MarketData[]>([]);
@@ -21,6 +23,7 @@ const Dashboard: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [signal, setSignal] = useState<AnalysisResult | null>(null);
   const [loading, setLoading] = useState(false);
+  const [marketType, setMarketType] = useState<MarketType>("stocks");
   
   useEffect(() => {
     // Load initial market data
@@ -38,6 +41,16 @@ const Dashboard: React.FC = () => {
     setLoading(true);
     setTimeout(() => {
       const marketData = markets.find(m => m.symbol === symbol) || markets[0];
+      if (!marketData) {
+        toast({
+          title: "Error",
+          description: "Unable to find market data for the selected symbol",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+      
       const candles = getCandleData(symbol, "1M");
       const fundamentalData = getFundamentalData(symbol);
       const newsData = getNewsData();
@@ -52,6 +65,14 @@ const Dashboard: React.FC = () => {
       
       setSignal(generatedSignal);
       setLoading(false);
+      
+      // Notify user about new signal
+      toast({
+        title: `New ${generatedSignal.signal.replace('_', ' ').toUpperCase()} Signal`,
+        description: `${symbol}: ${generatedSignal.reasoning[0]}`,
+        variant: generatedSignal.signal.includes('buy') ? "success" : 
+                 generatedSignal.signal.includes('sell') ? "destructive" : "default",
+      });
     }, 500); // Simulate API call delay
   };
   
@@ -69,11 +90,26 @@ const Dashboard: React.FC = () => {
       setMarkets(newMarkets);
       generateSignalForSymbol(activeSymbol);
       setLoading(false);
+      
+      toast({
+        title: "Data Refreshed",
+        description: "Market data has been updated",
+      });
     }, 1000);
   };
   
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
+  };
+  
+  const changeMarketType = (type: MarketType) => {
+    setMarketType(type);
+    // This would normally fetch new data based on market type
+    // For now we'll just use the mock data
+    toast({
+      title: `${type.charAt(0).toUpperCase() + type.slice(1)} Markets`,
+      description: `Switched to ${type} market view`,
+    });
   };
   
   const filteredMarkets = markets.filter(market => 
@@ -111,10 +147,35 @@ const Dashboard: React.FC = () => {
             <CardHeader className="pb-0">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-lg font-semibold">Markets</CardTitle>
-                <Badge className="bg-primary/10 text-primary-foreground">
-                  <ArrowDownUp className="h-3 w-3 mr-1" />
-                  NASDAQ
-                </Badge>
+                <div className="flex space-x-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={`h-8 w-8 p-0 ${marketType === "stocks" ? "bg-muted" : ""}`}
+                    onClick={() => changeMarketType("stocks")}
+                    title="Stocks"
+                  >
+                    <BarChart className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={`h-8 w-8 p-0 ${marketType === "crypto" ? "bg-muted" : ""}`}
+                    onClick={() => changeMarketType("crypto")}
+                    title="Cryptocurrencies"
+                  >
+                    <Bitcoin className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={`h-8 w-8 p-0 ${marketType === "forex" ? "bg-muted" : ""}`}
+                    onClick={() => changeMarketType("forex")}
+                    title="Forex"
+                  >
+                    <CurrencyDollar className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
               <div className="relative my-2">
                 <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />

@@ -8,7 +8,9 @@ import { LineChart, Line, AreaChart, Area, BarChart, Bar, CartesianGrid, XAxis, 
 import { CandleData, getCandleData } from '@/utils/marketData';
 import { PatternDetection, analyzeTechnicalPatterns } from '@/utils/analysis';
 import { Badge } from "@/components/ui/badge";
-import { Info, MousePointer, Activity, TrendingUp, TrendingDown, Zap } from "lucide-react";
+import { toast } from "@/components/ui/use-toast";
+import { Info, MousePointer, Activity, TrendingUp, TrendingDown, Zap, Candlestick, BarChart2, BarChart4, LineChart as LineChartIcon, Settings, Maximize, Lock, ArrowUpDown, Clock } from "lucide-react";
+import { MarketType, getAllSymbols, getSymbolsByMarketType } from '@/utils/marketSymbols';
 
 interface MarketChartProps {
   symbol: string;
@@ -26,10 +28,13 @@ const MarketChart: React.FC<MarketChartProps> = ({
   changePercent 
 }) => {
   const [timeframe, setTimeframe] = useState("1D");
-  const [chartType, setChartType] = useState("area");
+  const [chartType, setChartType] = useState("candle");
   const [chartData, setChartData] = useState<CandleData[]>([]);
   const [patterns, setPatterns] = useState<PatternDetection[]>([]);
   const [hoveredData, setHoveredData] = useState<any>(null);
+  const [showDrawingTools, setShowDrawingTools] = useState(false);
+  const [showIndicators, setShowIndicators] = useState(false);
+  const [marketType, setMarketType] = useState<MarketType>("stocks");
   const chartRef = useRef<HTMLDivElement>(null);
   
   useEffect(() => {
@@ -37,9 +42,21 @@ const MarketChart: React.FC<MarketChartProps> = ({
     const data = getCandleData(symbol, timeframe);
     setChartData(data);
     
-    // Get technical patterns
+    // Get technical patterns with ICT/SMC focus
     const detectedPatterns = analyzeTechnicalPatterns(symbol, data);
     setPatterns(detectedPatterns);
+    
+    if (patterns.length > 0) {
+      // Notify user about important patterns
+      const significantPattern = patterns.find(p => p.confidence > 75);
+      if (significantPattern) {
+        toast({
+          title: `${significantPattern.bullish ? 'Bullish' : 'Bearish'} ${significantPattern.name} Detected`,
+          description: significantPattern.description,
+          variant: significantPattern.bullish ? "success" : "destructive",
+        });
+      }
+    }
   }, [symbol, timeframe]);
 
   const formatTimeLabel = (timestamp: number) => {
@@ -75,6 +92,50 @@ const MarketChart: React.FC<MarketChartProps> = ({
     setHoveredData(null);
   };
 
+  const toggleDrawingTools = () => {
+    setShowDrawingTools(!showDrawingTools);
+    if (!showDrawingTools) {
+      toast({
+        title: "Drawing Tools",
+        description: "Drawing tools functionality would be implemented in a production version",
+      });
+    }
+  };
+
+  const toggleIndicators = () => {
+    setShowIndicators(!showIndicators);
+    if (!showIndicators) {
+      toast({
+        title: "Technical Indicators",
+        description: "Indicators like RSI, MACD, and Bollinger Bands would be available in a production version",
+      });
+    }
+  };
+
+  const handleFullscreen = () => {
+    if (chartRef.current && document.fullscreenEnabled) {
+      if (!document.fullscreenElement) {
+        chartRef.current.requestFullscreen().catch(err => {
+          toast({
+            title: "Fullscreen Error",
+            description: `Error attempting to enable fullscreen: ${err.message}`,
+            variant: "destructive",
+          });
+        });
+      } else {
+        document.exitFullscreen();
+      }
+    }
+  };
+
+  const changeMarketType = (type: MarketType) => {
+    setMarketType(type);
+    toast({
+      title: `Switched to ${type.charAt(0).toUpperCase() + type.slice(1)}`,
+      description: `Now viewing ${type} markets`,
+    });
+  };
+
   return (
     <Card className="glass w-full transition-all duration-300 animate-slide-up overflow-hidden">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -91,51 +152,126 @@ const MarketChart: React.FC<MarketChartProps> = ({
           </div>
         </div>
         <div className="flex items-center space-x-2">
+          <div className="hidden sm:flex space-x-1">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 text-xs"
+              onClick={() => changeMarketType("stocks")}
+              data-active={marketType === "stocks"}
+              aria-pressed={marketType === "stocks"}
+            >
+              Stocks
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 text-xs"
+              onClick={() => changeMarketType("crypto")}
+              data-active={marketType === "crypto"}
+              aria-pressed={marketType === "crypto"}
+            >
+              Crypto
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 text-xs"
+              onClick={() => changeMarketType("forex")}
+              data-active={marketType === "forex"}
+              aria-pressed={marketType === "forex"}
+            >
+              Forex
+            </Button>
+          </div>
           <Select value={timeframe} onValueChange={setTimeframe}>
             <SelectTrigger className="w-24 h-8 text-xs">
               <SelectValue placeholder="Timeframe" />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="1m">1 Min</SelectItem>
+              <SelectItem value="5m">5 Min</SelectItem>
+              <SelectItem value="15m">15 Min</SelectItem>
+              <SelectItem value="1H">1 Hour</SelectItem>
+              <SelectItem value="4H">4 Hour</SelectItem>
               <SelectItem value="1D">1 Day</SelectItem>
               <SelectItem value="1W">1 Week</SelectItem>
               <SelectItem value="1M">1 Month</SelectItem>
-              <SelectItem value="6M">6 Months</SelectItem>
-              <SelectItem value="1Y">1 Year</SelectItem>
             </SelectContent>
           </Select>
         </div>
       </CardHeader>
       <CardContent className="p-0 pt-2">
         <Tabs defaultValue="chart" className="px-4">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex flex-wrap items-center justify-between mb-4">
             <TabsList>
               <TabsTrigger value="chart" className="text-xs">Chart</TabsTrigger>
               <TabsTrigger value="patterns" className="text-xs">Patterns</TabsTrigger>
+              <TabsTrigger value="signals" className="text-xs">SMC/ICT Signals</TabsTrigger>
             </TabsList>
-            <div className="flex space-x-1">
+            <div className="flex space-x-1 mt-2 sm:mt-0">
+              <Button
+                variant={chartType === "candlestick" ? "default" : "outline"} 
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => setChartType("candlestick")}
+                title="Candlestick Chart"
+              >
+                <Candlestick className="h-4 w-4" />
+              </Button>
               <Button
                 variant={chartType === "area" ? "default" : "outline"} 
                 size="icon"
                 className="h-8 w-8"
                 onClick={() => setChartType("area")}
+                title="Area Chart"
               >
                 <Activity className="h-4 w-4" />
               </Button>
               <Button
-                variant={chartType === "candle" ? "default" : "outline"} 
+                variant={chartType === "line" ? "default" : "outline"} 
                 size="icon"
                 className="h-8 w-8"
-                onClick={() => setChartType("candle")}
+                onClick={() => setChartType("line")}
+                title="Line Chart"
               >
-                <TrendingUp className="h-4 w-4" />
+                <LineChartIcon className="h-4 w-4" />
               </Button>
               <Button
                 variant={chartType === "volume" ? "default" : "outline"} 
                 size="icon"
                 className="h-8 w-8"
                 onClick={() => setChartType("volume")}
+                title="Volume Chart"
               >
-                <BarChart className="h-4 w-4" />
+                <BarChart2 className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline" 
+                size="icon"
+                className="h-8 w-8"
+                onClick={toggleDrawingTools}
+                title="Drawing Tools"
+              >
+                <MousePointer className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline" 
+                size="icon"
+                className="h-8 w-8"
+                onClick={toggleIndicators}
+                title="Indicators"
+              >
+                <Settings className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline" 
+                size="icon"
+                className="h-8 w-8"
+                onClick={handleFullscreen}
+                title="Fullscreen"
+              >
+                <Maximize className="h-4 w-4" />
               </Button>
             </div>
           </div>
@@ -143,7 +279,7 @@ const MarketChart: React.FC<MarketChartProps> = ({
           <TabsContent value="chart" className="mt-0">
             <div className="chart-container h-64 relative" ref={chartRef}>
               {hoveredData && (
-                <div className="chart-tooltip">
+                <div className="chart-tooltip absolute bg-background border border-border rounded-md shadow-md p-3 z-10 top-4 left-4">
                   <div className="text-xs font-semibold">{formatTimeLabel(hoveredData.time)}</div>
                   <div className="grid grid-cols-2 gap-x-4 gap-y-1 mt-1">
                     <div className="text-xs">Open:</div>
@@ -154,6 +290,8 @@ const MarketChart: React.FC<MarketChartProps> = ({
                     <div className="text-xs font-medium">{formatPrice(hoveredData.low)}</div>
                     <div className="text-xs">Close:</div>
                     <div className="text-xs font-medium">{formatPrice(hoveredData.close)}</div>
+                    <div className="text-xs">Volume:</div>
+                    <div className="text-xs font-medium">{hoveredData.volume.toLocaleString()}</div>
                   </div>
                 </div>
               )}
@@ -196,7 +334,39 @@ const MarketChart: React.FC<MarketChartProps> = ({
                       fill="url(#colorPrice)" 
                     />
                   </AreaChart>
-                ) : chartType === "candle" ? (
+                ) : chartType === "line" ? (
+                  <LineChart
+                    data={chartData}
+                    onMouseMove={handleMouseMove}
+                    onMouseLeave={handleMouseLeave}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis 
+                      dataKey="time" 
+                      tickFormatter={formatTimeLabel}
+                      tick={{ fontSize: 10 }}
+                      stroke="hsl(var(--muted-foreground))"
+                    />
+                    <YAxis 
+                      tickFormatter={tooltipFormatter}
+                      domain={['auto', 'auto']}
+                      tick={{ fontSize: 10 }}
+                      stroke="hsl(var(--muted-foreground))"
+                    />
+                    <Tooltip 
+                      formatter={tooltipFormatter}
+                      labelFormatter={formatTimeLabel}
+                      contentStyle={{ display: 'none' }}
+                    />
+                    <Line 
+                      type="linear" 
+                      dataKey="close" 
+                      stroke="hsl(var(--primary))" 
+                      strokeWidth={2}
+                      dot={false}
+                    />
+                  </LineChart>
+                ) : chartType === "candlestick" ? (
                   <LineChart
                     data={chartData}
                     onMouseMove={handleMouseMove}
@@ -304,6 +474,69 @@ const MarketChart: React.FC<MarketChartProps> = ({
                         </div>
                       </div>
                       <p className="text-sm text-muted-foreground mt-2">{pattern.description}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </TabsContent>
+          <TabsContent value="signals" className="mt-0">
+            <div className="h-64 overflow-auto py-2">
+              {patterns.filter(p => p.confidence > 70).length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+                  <Info className="h-10 w-10 mb-2 opacity-50" />
+                  <p>No high-confidence signals available</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {patterns.filter(p => p.confidence > 70).map((pattern, index) => (
+                    <div key={index} className="rounded-md border border-border p-4 transition-all hover:shadow-md">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center">
+                          <Badge className={`mr-2 ${pattern.bullish ? 'bg-success/20 text-success' : 'bg-danger/20 text-danger'}`}>
+                            {pattern.bullish ? <TrendingUp className="w-3 h-3 mr-1" /> : <TrendingDown className="w-3 h-3 mr-1" />}
+                            {pattern.bullish ? 'BUY' : 'SELL'} SIGNAL
+                          </Badge>
+                        </div>
+                        <div className="flex items-center">
+                          <Badge variant="outline" className="text-xs flex items-center">
+                            <Clock className="w-3 h-3 mr-1" />
+                            {pattern.timeframe}
+                          </Badge>
+                        </div>
+                      </div>
+                      
+                      <h4 className="font-semibold text-md mb-1">{pattern.name}</h4>
+                      <p className="text-sm text-muted-foreground mb-3">{pattern.description}</p>
+                      
+                      <div className="grid grid-cols-2 gap-2 mb-3">
+                        <div className="rounded-md bg-muted p-2">
+                          <div className="text-xs text-muted-foreground">Entry Price</div>
+                          <div className="font-medium">{formatPrice(price)}</div>
+                        </div>
+                        <div className="rounded-md bg-muted p-2">
+                          <div className="text-xs text-muted-foreground">Stop Loss</div>
+                          <div className="font-medium">{formatPrice(pattern.bullish ? price * 0.97 : price * 1.03)}</div>
+                        </div>
+                        <div className="rounded-md bg-muted p-2">
+                          <div className="text-xs text-muted-foreground">Take Profit 1</div>
+                          <div className="font-medium">{formatPrice(pattern.bullish ? price * 1.05 : price * 0.95)}</div>
+                        </div>
+                        <div className="rounded-md bg-muted p-2">
+                          <div className="text-xs text-muted-foreground">Take Profit 2</div>
+                          <div className="font-medium">{formatPrice(pattern.bullish ? price * 1.10 : price * 0.90)}</div>
+                        </div>
+                      </div>
+                      
+                      <div className="text-xs">
+                        <div className="font-medium mb-1">Key Levels:</div>
+                        <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                          <li>{pattern.bullish ? 'Support' : 'Resistance'} zone at {formatPrice(pattern.bullish ? price * 0.98 : price * 1.02)}</li>
+                          <li>ICT {pattern.bullish ? 'Optimal Trade Entry' : 'Fair Value Gap'} at {formatPrice(pattern.bullish ? price * 0.995 : price * 1.005)}</li>
+                          <li>Market structure {pattern.bullish ? 'break of structure to upside' : 'break of structure to downside'}</li>
+                          <li>SMC {pattern.bullish ? 'order block' : 'breaker block'} confirmation</li>
+                        </ul>
+                      </div>
                     </div>
                   ))}
                 </div>
