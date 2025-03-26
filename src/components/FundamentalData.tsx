@@ -12,7 +12,9 @@ interface FundamentalDataProps {
 }
 
 const FundamentalData: React.FC<FundamentalDataProps> = ({ data }) => {
-  const formatCurrency = (value: number) => {
+  const formatCurrency = (value: number | undefined) => {
+    if (value === undefined || value === null) return 'N/A';
+    
     if (value >= 1e12) {
       return `$${(value / 1e12).toFixed(2)}T`;
     } else if (value >= 1e9) {
@@ -24,11 +26,13 @@ const FundamentalData: React.FC<FundamentalDataProps> = ({ data }) => {
     }
   };
 
-  const formatPercent = (value: number) => {
+  const formatPercent = (value: number | undefined) => {
+    if (value === undefined || value === null) return 'N/A';
     return `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`;
   };
 
-  const growthColor = (value: number) => {
+  const growthColor = (value: number | undefined) => {
+    if (value === undefined || value === null) return "text-muted-foreground";
     if (value > 10) return "text-success";
     if (value > 0) return "text-success/70";
     if (value > -10) return "text-danger/70";
@@ -37,6 +41,7 @@ const FundamentalData: React.FC<FundamentalDataProps> = ({ data }) => {
 
   const valuationScore = () => {
     // Simple scoring based on P/E ratio
+    if (!data.pe) return 50; // Default score if PE is undefined
     if (data.pe < 15) return 80;
     if (data.pe < 25) return 60;
     if (data.pe < 35) return 40;
@@ -45,6 +50,10 @@ const FundamentalData: React.FC<FundamentalDataProps> = ({ data }) => {
 
   const growthScore = () => {
     // Combined score of revenue and profit growth
+    if (data.revenueGrowth === undefined || data.profitGrowth === undefined) {
+      return 50; // Default score if growth metrics are undefined
+    }
+    
     const combined = (data.revenueGrowth + data.profitGrowth) / 2;
     if (combined > 20) return 90;
     if (combined > 10) return 70;
@@ -54,6 +63,10 @@ const FundamentalData: React.FC<FundamentalDataProps> = ({ data }) => {
 
   const financialHealthScore = () => {
     // Simple debt to assets ratio
+    if (data.debt === undefined || data.assets === undefined || data.assets === 0) {
+      return 50; // Default score if financial metrics are undefined or assets is zero
+    }
+    
     const ratio = data.debt / data.assets;
     if (ratio < 0.2) return 90;
     if (ratio < 0.4) return 70;
@@ -76,20 +89,20 @@ const FundamentalData: React.FC<FundamentalDataProps> = ({ data }) => {
               <div className="text-sm text-muted-foreground mb-1 flex items-center">
                 <DollarSign className="w-3 h-3 mr-1" /> P/E Ratio
               </div>
-              <div className="text-lg font-medium">{data.pe.toFixed(2)}</div>
+              <div className="text-lg font-medium">{data.pe?.toFixed(2) || 'N/A'}</div>
             </div>
             <div>
               <div className="text-sm text-muted-foreground mb-1 flex items-center">
                 <DollarSign className="w-3 h-3 mr-1" /> EPS
               </div>
-              <div className="text-lg font-medium">${data.eps.toFixed(2)}</div>
+              <div className="text-lg font-medium">${data.eps?.toFixed(2) || 'N/A'}</div>
             </div>
             
             <div>
               <div className="text-sm text-muted-foreground mb-1 flex items-center">
                 <Percent className="w-3 h-3 mr-1" /> Dividend Yield
               </div>
-              <div className="text-lg font-medium">{data.dividendYield.toFixed(2)}%</div>
+              <div className="text-lg font-medium">{data.dividendYield ? `${data.dividendYield.toFixed(2)}%` : 'N/A'}</div>
             </div>
             
             <div>
@@ -106,17 +119,21 @@ const FundamentalData: React.FC<FundamentalDataProps> = ({ data }) => {
             <div>
               <div className="flex justify-between mb-1">
                 <span className="text-sm text-muted-foreground">Revenue: {formatCurrency(data.revenue)}</span>
-                <Badge className={`${growthColor(data.revenueGrowth)} bg-transparent flex items-center`}>
-                  {data.revenueGrowth > 0 ? <ArrowUpRight className="w-3 h-3 mr-1" /> : <ArrowDownRight className="w-3 h-3 mr-1" />}
-                  {formatPercent(data.revenueGrowth)}
-                </Badge>
+                {data.revenueGrowth !== undefined && (
+                  <Badge className={`${growthColor(data.revenueGrowth)} bg-transparent flex items-center`}>
+                    {data.revenueGrowth > 0 ? <ArrowUpRight className="w-3 h-3 mr-1" /> : <ArrowDownRight className="w-3 h-3 mr-1" />}
+                    {formatPercent(data.revenueGrowth)}
+                  </Badge>
+                )}
               </div>
               <div className="flex justify-between mb-1">
                 <span className="text-sm text-muted-foreground">Profit: {formatCurrency(data.profit)}</span>
-                <Badge className={`${growthColor(data.profitGrowth)} bg-transparent flex items-center`}>
-                  {data.profitGrowth > 0 ? <ArrowUpRight className="w-3 h-3 mr-1" /> : <ArrowDownRight className="w-3 h-3 mr-1" />}
-                  {formatPercent(data.profitGrowth)}
-                </Badge>
+                {data.profitGrowth !== undefined && (
+                  <Badge className={`${growthColor(data.profitGrowth)} bg-transparent flex items-center`}>
+                    {data.profitGrowth > 0 ? <ArrowUpRight className="w-3 h-3 mr-1" /> : <ArrowDownRight className="w-3 h-3 mr-1" />}
+                    {formatPercent(data.profitGrowth)}
+                  </Badge>
+                )}
               </div>
             </div>
           </div>

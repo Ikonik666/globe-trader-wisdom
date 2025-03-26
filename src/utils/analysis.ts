@@ -1,3 +1,4 @@
+
 import { CandleData, MarketData, NewsItem, FundamentalData } from "./marketData";
 
 export type TradeSignal = "strong_buy" | "buy" | "neutral" | "sell" | "strong_sell";
@@ -159,11 +160,13 @@ export const analyzeSentiment = (news: NewsItem[]): {
   const impactfulNews: NewsItem[] = [];
   
   news.forEach(item => {
-    const impact = item.sentiment === "positive" ? item.impactScore : 
-                   item.sentiment === "negative" ? -item.impactScore : 0;
+    // Use relevance as fallback if impactScore is not available
+    const impactValue = item.impactScore !== undefined ? item.impactScore : item.relevance * 10;
+    const impact = item.sentiment === "positive" ? impactValue : 
+                   item.sentiment === "negative" ? -impactValue : 0;
     sentimentScore += impact;
     
-    if (item.impactScore >= 7) {
+    if (impactValue >= 7) {
       impactfulNews.push(item);
     }
   });
@@ -187,43 +190,51 @@ export const analyzeFundamentals = (fundamental: FundamentalData): {
   const highlights: string[] = [];
   
   // PE ratio analysis
-  if (fundamental.pe < 15) {
-    score += 10;
-    highlights.push("Attractively valued with low P/E ratio");
-  } else if (fundamental.pe > 40) {
-    score -= 10;
-    highlights.push("Potentially overvalued with high P/E ratio");
+  if (fundamental.pe !== undefined) {
+    if (fundamental.pe < 15) {
+      score += 10;
+      highlights.push("Attractively valued with low P/E ratio");
+    } else if (fundamental.pe > 40) {
+      score -= 10;
+      highlights.push("Potentially overvalued with high P/E ratio");
+    }
   }
   
   // Growth analysis
-  if (fundamental.revenueGrowth > 15) {
-    score += 15;
-    highlights.push("Strong revenue growth above market average");
-  } else if (fundamental.revenueGrowth < 5) {
-    score -= 10;
-    highlights.push("Weak revenue growth below market average");
+  if (fundamental.revenueGrowth !== undefined) {
+    if (fundamental.revenueGrowth > 15) {
+      score += 15;
+      highlights.push("Strong revenue growth above market average");
+    } else if (fundamental.revenueGrowth < 5) {
+      score -= 10;
+      highlights.push("Weak revenue growth below market average");
+    }
   }
   
-  if (fundamental.profitGrowth > 20) {
-    score += 15;
-    highlights.push("Excellent profit growth demonstrates business efficiency");
-  } else if (fundamental.profitGrowth < 0) {
-    score -= 15;
-    highlights.push("Declining profits indicate potential business challenges");
+  if (fundamental.profitGrowth !== undefined) {
+    if (fundamental.profitGrowth > 20) {
+      score += 15;
+      highlights.push("Excellent profit growth demonstrates business efficiency");
+    } else if (fundamental.profitGrowth < 0) {
+      score -= 15;
+      highlights.push("Declining profits indicate potential business challenges");
+    }
   }
   
   // Financial health
-  const debtToAssets = fundamental.debt / fundamental.assets;
-  if (debtToAssets < 0.2) {
-    score += 10;
-    highlights.push("Strong balance sheet with low debt relative to assets");
-  } else if (debtToAssets > 0.5) {
-    score -= 10;
-    highlights.push("High debt levels may constrain future flexibility");
+  if (fundamental.debt !== undefined && fundamental.assets !== undefined && fundamental.assets > 0) {
+    const debtToAssets = fundamental.debt / fundamental.assets;
+    if (debtToAssets < 0.2) {
+      score += 10;
+      highlights.push("Strong balance sheet with low debt relative to assets");
+    } else if (debtToAssets > 0.5) {
+      score -= 10;
+      highlights.push("High debt levels may constrain future flexibility");
+    }
   }
   
   // Dividend
-  if (fundamental.dividendYield > 3) {
+  if (fundamental.dividendYield !== undefined && fundamental.dividendYield > 3) {
     score += 5;
     highlights.push("Attractive dividend yield provides income potential");
   }

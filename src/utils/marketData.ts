@@ -1,4 +1,3 @@
-
 import { MarketType } from './marketSymbols';
 
 // Market data types
@@ -27,7 +26,7 @@ export interface FundamentalData {
   sector?: string;
   industry?: string;
   marketCap?: number;
-  peRatio?: number;
+  pe?: number;
   eps?: number;
   dividend?: number;
   dividendYield?: number;
@@ -39,6 +38,12 @@ export interface FundamentalData {
   priceToSales?: number;
   shortRatio?: number;
   shortFloat?: number;
+  revenue?: number;
+  revenueGrowth?: number;
+  profit?: number;
+  profitGrowth?: number;
+  debt?: number;
+  assets?: number;
 }
 
 export interface NewsItem {
@@ -51,6 +56,8 @@ export interface NewsItem {
   relevance: number;
   summary: string;
   relatedSymbols: string[];
+  impactScore?: number;
+  timestamp?: number;
 }
 
 // Mock data for different market types
@@ -199,6 +206,15 @@ export const getFundamentalData = (symbol: string): FundamentalData => {
       avgVolume: Math.random() * 10000000000,
       high52W: marketData.price * (1 + Math.random() * 0.5),
       low52W: marketData.price * (1 - Math.random() * 0.5),
+      revenue: Math.random() * 1000000000,
+      revenueGrowth: Math.random() * 30 - 10,
+      profit: Math.random() * 500000000,
+      profitGrowth: Math.random() * 40 - 15,
+      debt: Math.random() * 100000000,
+      assets: Math.random() * 2000000000,
+      pe: 15 + Math.random() * 25,
+      eps: Math.random() * 5,
+      dividendYield: 0,
     };
   } else if (symbol.includes("USD") || symbol.includes("EUR") || symbol.includes("GBP")) {
     // Forex fundamental data
@@ -211,6 +227,15 @@ export const getFundamentalData = (symbol: string): FundamentalData => {
       avgVolume: Math.random() * 100000000000,
       high52W: marketData.price * (1 + Math.random() * 0.1),
       low52W: marketData.price * (1 - Math.random() * 0.1),
+      revenue: 0,
+      revenueGrowth: 0,
+      profit: 0,
+      profitGrowth: 0,
+      debt: 0,
+      assets: Math.random() * 1000000000000,
+      pe: 0,
+      eps: 0,
+      dividendYield: 0,
     };
   } else {
     // Stock fundamental data
@@ -220,7 +245,7 @@ export const getFundamentalData = (symbol: string): FundamentalData => {
       sector: ["Technology", "Healthcare", "Finance", "Energy", "Consumer Goods"][Math.floor(Math.random() * 5)],
       industry: ["Software", "Hardware", "Biotech", "Banking", "Oil & Gas", "Retail"][Math.floor(Math.random() * 6)],
       marketCap: Math.random() * 2000000000000,
-      peRatio: 10 + Math.random() * 30,
+      pe: 10 + Math.random() * 30,
       eps: Math.random() * 10,
       dividend: Math.random() * 5,
       dividendYield: Math.random() * 0.05,
@@ -232,6 +257,12 @@ export const getFundamentalData = (symbol: string): FundamentalData => {
       priceToSales: 1 + Math.random() * 20,
       shortRatio: Math.random() * 10,
       shortFloat: Math.random() * 0.2,
+      revenue: Math.random() * 50000000000,
+      revenueGrowth: Math.random() * 30 - 5,
+      profit: Math.random() * 10000000000,
+      profitGrowth: Math.random() * 35 - 10,
+      debt: Math.random() * 20000000000,
+      assets: Math.random() * 100000000000,
     };
   }
 };
@@ -248,7 +279,9 @@ export const getNewsData = (): NewsItem[] => {
       sentiment: "positive",
       relevance: 0.92,
       summary: "The Federal Reserve has signaled potential interest rate cuts in the near future as inflation pressures ease, potentially boosting market sentiment.",
-      relatedSymbols: ["SPY", "QQQ", "AAPL", "MSFT"]
+      relatedSymbols: ["SPY", "QQQ", "AAPL", "MSFT"],
+      impactScore: 8.5,
+      timestamp: Date.now() - 2 * 3600000
     },
     {
       id: 2,
@@ -259,7 +292,9 @@ export const getNewsData = (): NewsItem[] => {
       sentiment: "positive",
       relevance: 0.88,
       summary: "Bitcoin has surged past $64,000 as institutional adoption continues to grow, with several major financial institutions announcing new cryptocurrency offerings.",
-      relatedSymbols: ["BTCUSD", "ETHUSD", "COIN"]
+      relatedSymbols: ["BTCUSD", "ETHUSD", "COIN"],
+      impactScore: 9.2,
+      timestamp: Date.now() - 5 * 3600000
     },
     {
       id: 3,
@@ -270,7 +305,9 @@ export const getNewsData = (): NewsItem[] => {
       sentiment: "negative",
       relevance: 0.85,
       summary: "Major technology companies are facing renewed antitrust scrutiny as regulators announce plans for more aggressive enforcement of competition laws.",
-      relatedSymbols: ["AAPL", "GOOGL", "MSFT", "AMZN"]
+      relatedSymbols: ["AAPL", "GOOGL", "MSFT", "AMZN"],
+      impactScore: 7.8,
+      timestamp: Date.now() - 12 * 3600000
     },
     {
       id: 4,
@@ -281,7 +318,9 @@ export const getNewsData = (): NewsItem[] => {
       sentiment: "negative",
       relevance: 0.75,
       summary: "Crude oil prices have declined amid growing concerns about global demand, particularly as major economies show signs of slowing growth.",
-      relatedSymbols: ["USO", "XLE", "CVX", "XOM"]
+      relatedSymbols: ["USO", "XLE", "CVX", "XOM"],
+      impactScore: 6.5,
+      timestamp: Date.now() - 18 * 3600000
     },
     {
       id: 5,
@@ -292,7 +331,9 @@ export const getNewsData = (): NewsItem[] => {
       sentiment: "neutral",
       relevance: 0.82,
       summary: "The Euro has gained strength against the US Dollar following comments from European Central Bank officials about monetary policy directions.",
-      relatedSymbols: ["EURUSD", "FXE", "UUP"]
+      relatedSymbols: ["EURUSD", "FXE", "UUP"],
+      impactScore: 7.2,
+      timestamp: Date.now() - 24 * 3600000
     }
   ];
 };
