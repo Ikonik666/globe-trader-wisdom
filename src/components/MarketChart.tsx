@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -9,7 +8,7 @@ import { CandleData, getCandleData } from '@/utils/marketData';
 import { PatternDetection, analyzeTechnicalPatterns } from '@/utils/analysis';
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/components/ui/use-toast";
-import { Info, MousePointer, Activity, TrendingUp, TrendingDown, Zap, Candlestick, BarChart2, BarChart4, LineChart as LineChartIcon, Settings, Maximize, Lock, ArrowUpDown, Clock } from "lucide-react";
+import { Info, MousePointer, Activity, TrendingUp, TrendingDown, Zap, CandlestickChart, BarChart2, BarChart4, LineChart as LineChartIcon, Settings, Maximize, Lock, ArrowUpDown, Clock } from "lucide-react";
 import { MarketType, getAllSymbols, getSymbolsByMarketType } from '@/utils/marketSymbols';
 
 interface MarketChartProps {
@@ -53,7 +52,7 @@ const MarketChart: React.FC<MarketChartProps> = ({
         toast({
           title: `${significantPattern.bullish ? 'Bullish' : 'Bearish'} ${significantPattern.name} Detected`,
           description: significantPattern.description,
-          variant: significantPattern.bullish ? "success" : "destructive",
+          variant: significantPattern.bullish ? "default" : "destructive",
         });
       }
     }
@@ -217,7 +216,7 @@ const MarketChart: React.FC<MarketChartProps> = ({
                 onClick={() => setChartType("candlestick")}
                 title="Candlestick Chart"
               >
-                <Candlestick className="h-4 w-4" />
+                <CandlestickChart className="h-4 w-4" />
               </Button>
               <Button
                 variant={chartType === "area" ? "default" : "outline"} 

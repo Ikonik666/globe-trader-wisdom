@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -14,7 +13,7 @@ import MarketChart from './MarketChart';
 import FundamentalData from './FundamentalData';
 import NewsCard from './NewsCard';
 import { toast } from "@/components/ui/use-toast";
-import { Search, RefreshCcw, ArrowDownUp, Bitcoin, CurrencyDollar, BarChart, TrendingUp } from 'lucide-react';
+import { Search, RefreshCcw, ArrowDownUp, Bitcoin, DollarSign, BarChart, TrendingUp } from 'lucide-react';
 import { MarketType, getSymbolsByMarketType } from '@/utils/marketSymbols';
 
 const Dashboard: React.FC = () => {
@@ -70,7 +69,7 @@ const Dashboard: React.FC = () => {
       toast({
         title: `New ${generatedSignal.signal.replace('_', ' ').toUpperCase()} Signal`,
         description: `${symbol}: ${generatedSignal.reasoning[0]}`,
-        variant: generatedSignal.signal.includes('buy') ? "success" : 
+        variant: generatedSignal.signal.includes('buy') ? "default" : 
                  generatedSignal.signal.includes('sell') ? "destructive" : "default",
       });
     }, 500); // Simulate API call delay
@@ -173,7 +172,7 @@ const Dashboard: React.FC = () => {
                     onClick={() => changeMarketType("forex")}
                     title="Forex"
                   >
-                    <CurrencyDollar className="h-4 w-4" />
+                    <DollarSign className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
