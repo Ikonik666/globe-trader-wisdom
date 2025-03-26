@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -25,21 +26,26 @@ const Dashboard: React.FC = () => {
   const [marketType, setMarketType] = useState<MarketType>("stocks");
   
   useEffect(() => {
-    // Load initial market data
-    const marketData = getMarketData();
+    // Load initial market data based on market type
+    loadMarketData(marketType);
+  }, []);
+
+  // Load market data based on the selected market type
+  const loadMarketData = (type: MarketType) => {
+    const marketData = getMarketData(type);
     setMarkets(marketData);
     
     if (marketData.length > 0) {
       const initialSymbol = marketData[0].symbol;
       setActiveSymbol(initialSymbol);
-      generateSignalForSymbol(initialSymbol);
+      generateSignalForSymbol(initialSymbol, marketData);
     }
-  }, []);
+  };
   
-  const generateSignalForSymbol = (symbol: string) => {
+  const generateSignalForSymbol = (symbol: string, currentMarkets: MarketData[] = markets) => {
     setLoading(true);
     setTimeout(() => {
-      const marketData = markets.find(m => m.symbol === symbol) || markets[0];
+      const marketData = currentMarkets.find(m => m.symbol === symbol) || currentMarkets[0];
       if (!marketData) {
         toast({
           title: "Error",
@@ -85,9 +91,9 @@ const Dashboard: React.FC = () => {
     setLoading(true);
     // Simulate data refresh
     setTimeout(() => {
-      const newMarkets = getMarketData();
+      const newMarkets = getMarketData(marketType);
       setMarkets(newMarkets);
-      generateSignalForSymbol(activeSymbol);
+      generateSignalForSymbol(activeSymbol, newMarkets);
       setLoading(false);
       
       toast({
@@ -103,8 +109,8 @@ const Dashboard: React.FC = () => {
   
   const changeMarketType = (type: MarketType) => {
     setMarketType(type);
-    // This would normally fetch new data based on market type
-    // For now we'll just use the mock data
+    loadMarketData(type);
+    
     toast({
       title: `${type.charAt(0).toUpperCase() + type.slice(1)} Markets`,
       description: `Switched to ${type} market view`,

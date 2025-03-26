@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -129,6 +130,8 @@ const MarketChart: React.FC<MarketChartProps> = ({
 
   const changeMarketType = (type: MarketType) => {
     setMarketType(type);
+    // Note: the parent component (Dashboard) should handle the actual data change
+    // This is just a UI indication
     toast({
       title: `Switched to ${type.charAt(0).toUpperCase() + type.slice(1)}`,
       description: `Now viewing ${type} markets`,
