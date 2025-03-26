@@ -42,18 +42,18 @@ const MarketChart: React.FC<MarketChartProps> = ({
     const data = getCandleData(symbol, timeframe);
     setChartData(data);
     
-    // Get technical patterns with ICT/SMC focus
-    const detectedPatterns = analyzeTechnicalPatterns(symbol, data);
+    // Get technical patterns with ICT/SMC focus that respects the current timeframe
+    const detectedPatterns = analyzeTechnicalPatterns(symbol, data, timeframe);
     setPatterns(detectedPatterns);
     
-    if (patterns.length > 0) {
-      // Notify user about important patterns
-      const significantPattern = patterns.find(p => p.confidence > 75);
+    if (detectedPatterns.length > 0) {
+      // Notify user about important patterns only on timeframe change
+      const significantPattern = detectedPatterns.find(p => p.confidence > 75);
       if (significantPattern) {
         toast({
           title: `${significantPattern.bullish ? 'Bullish' : 'Bearish'} ${significantPattern.name} Detected`,
-          description: significantPattern.description,
-          variant: significantPattern.bullish ? "default" : "destructive",
+          description: `${significantPattern.description} (${significantPattern.timeframe})`,
+          variant: "default",
         });
       }
     }
@@ -61,9 +61,9 @@ const MarketChart: React.FC<MarketChartProps> = ({
 
   const formatTimeLabel = (timestamp: number) => {
     const date = new Date(timestamp);
-    if (timeframe === "1D") {
+    if (timeframe === "1D" || timeframe === "1m" || timeframe === "5m" || timeframe === "15m") {
       return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    } else if (timeframe === "1W") {
+    } else if (timeframe === "1W" || timeframe === "1H" || timeframe === "4H") {
       return `${date.getMonth() + 1}/${date.getDate()} ${date.getHours()}:00`;
     } else {
       return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
@@ -136,6 +136,21 @@ const MarketChart: React.FC<MarketChartProps> = ({
       title: `Switched to ${type.charAt(0).toUpperCase() + type.slice(1)}`,
       description: `Now viewing ${type} markets`,
     });
+  };
+
+  // Convert timeframe to a more readable format for display
+  const getTimeframeDisplay = (tf: string): string => {
+    switch(tf) {
+      case "1m": return "1 Minute";
+      case "5m": return "5 Minutes";
+      case "15m": return "15 Minutes";
+      case "1H": return "1 Hour";
+      case "4H": return "4 Hours";
+      case "1D": return "1 Day";
+      case "1W": return "1 Week";
+      case "1M": return "1 Month";
+      default: return tf;
+    }
   };
 
   return (
@@ -280,6 +295,9 @@ const MarketChart: React.FC<MarketChartProps> = ({
         
           <TabsContent value="chart" className="mt-0">
             <div className="chart-container h-64 relative" ref={chartRef}>
+              <div className="absolute top-2 left-2 z-10 bg-background/80 backdrop-blur-sm py-1 px-2 rounded-md text-xs font-medium border border-border">
+                Current timeframe: {getTimeframeDisplay(timeframe)}
+              </div>
               {hoveredData && (
                 <div className="chart-tooltip absolute bg-background border border-border rounded-md shadow-md p-3 z-10 top-4 left-4">
                   <div className="text-xs font-semibold">{formatTimeLabel(hoveredData.time)}</div>
@@ -448,10 +466,13 @@ const MarketChart: React.FC<MarketChartProps> = ({
           </TabsContent>
           <TabsContent value="patterns" className="mt-0">
             <div className="h-64 overflow-auto py-2">
+              <div className="bg-muted/30 rounded p-2 mb-3 text-xs text-muted-foreground">
+                Showing patterns for {getTimeframeDisplay(timeframe)} timeframe
+              </div>
               {patterns.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
                   <Info className="h-10 w-10 mb-2 opacity-50" />
-                  <p>No significant patterns detected</p>
+                  <p>No significant patterns detected on this timeframe</p>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -484,10 +505,13 @@ const MarketChart: React.FC<MarketChartProps> = ({
           </TabsContent>
           <TabsContent value="signals" className="mt-0">
             <div className="h-64 overflow-auto py-2">
+              <div className="bg-muted/30 rounded p-2 mb-3 text-xs text-muted-foreground">
+                Showing signals for {getTimeframeDisplay(timeframe)} timeframe
+              </div>
               {patterns.filter(p => p.confidence > 70).length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
                   <Info className="h-10 w-10 mb-2 opacity-50" />
-                  <p>No high-confidence signals available</p>
+                  <p>No high-confidence signals available on this timeframe</p>
                 </div>
               ) : (
                 <div className="space-y-4">

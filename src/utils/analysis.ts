@@ -88,59 +88,81 @@ const smcDescriptions = {
   "Market Maker Intent": "Key level where market makers are showing their hand for a potential bearish move."
 };
 
-// Timeframes used in ICT/SMC analysis
-const ictTimeframes = ["M15", "H1", "H4", "D1", "W1"];
+// Timeframes mapping to ensure consistency
+const timeframeMapping: Record<string, string> = {
+  "1m": "M1",
+  "5m": "M5", 
+  "15m": "M15",
+  "1H": "H1",
+  "4H": "H4",
+  "1D": "D1",
+  "1W": "W1",
+  "1M": "MN"
+};
 
-// Analyze technical patterns including ICT concepts
+// Analyze technical patterns including ICT concepts - now tied to timeframe
 export const analyzeTechnicalPatterns = (
   symbol: string,
-  candles: CandleData[]
+  candles: CandleData[],
+  timeframe: string
 ): PatternDetection[] => {
   if (!candles || candles.length === 0) {
     return [];
   }
   
-  // This would normally use sophisticated algorithms to detect ICT/SMC patterns
-  // For demo, returning mock pattern detections
+  // Get standardized timeframe notation
+  const standardTimeframe = timeframeMapping[timeframe] || "D1";
   
-  const lastCandle = candles[candles.length - 1];
+  // Use seed from symbol + timeframe for deterministic pattern generation
+  const seed = hashString(symbol + timeframe);
   const mockPatterns: PatternDetection[] = [];
   
   // Determine if the general trend is bullish or bearish
-  const isBullishTrend = lastCandle.close > lastCandle.open;
+  // Use deterministic approach based on the last 5 candles
+  const lastCandles = candles.slice(-5);
+  let upCount = 0;
+  let downCount = 0;
+  
+  lastCandles.forEach(candle => {
+    if (candle.close > candle.open) upCount++;
+    else downCount++;
+  });
+  
+  const isBullishTrend = upCount > downCount;
   
   // Select appropriate patterns based on trend
   const patterns = isBullishTrend ? bullishSMCPatterns : bearishSMCPatterns;
   
-  // Generate 2-4 patterns (more realistic)
-  const numPatterns = 2 + Math.floor(Math.random() * 3);
+  // Generate 2-3 patterns based on the seed
+  const numPatterns = 2 + (seed % 2);
   
-  // Create a shuffle to randomize the pattern selection
-  const shuffledPatterns = [...patterns].sort(() => Math.random() - 0.5);
+  // Create a deterministic shuffle using the seed
+  const shuffledPatterns = deterministicShuffle(patterns, seed);
   const selectedPatterns = shuffledPatterns.slice(0, numPatterns);
   
   // Create patterns with various confidence levels
-  selectedPatterns.forEach((patternName) => {
-    const timeframe = ictTimeframes[Math.floor(Math.random() * ictTimeframes.length)];
+  selectedPatterns.forEach((patternName, index) => {
+    // Create deterministic confidence based on symbol, timeframe and pattern index
+    const confidence = 65 + ((seed + index) % 25);
     
     mockPatterns.push({
       name: patternName,
-      timeframe: timeframe,
-      confidence: 65 + Math.floor(Math.random() * 25), // 65-90% confidence
+      timeframe: standardTimeframe,
+      confidence: confidence,
       bullish: isBullishTrend,
       description: smcDescriptions[patternName as keyof typeof smcDescriptions] || 
                  "ICT/SMC pattern detected based on institutional order flow."
     });
   });
   
-  // Add one opposite pattern for realism (e.g., a bearish pattern in bullish trend)
+  // Add one opposite pattern for realism with a lower confidence
   const oppositePatterns = isBullishTrend ? bearishSMCPatterns : bullishSMCPatterns;
-  const oppositePattern = oppositePatterns[Math.floor(Math.random() * oppositePatterns.length)];
+  const oppositePattern = oppositePatterns[seed % oppositePatterns.length];
   
   mockPatterns.push({
     name: oppositePattern,
-    timeframe: ictTimeframes[Math.floor(Math.random() * ictTimeframes.length)],
-    confidence: 50 + Math.floor(Math.random() * 20), // Less confident (50-70%)
+    timeframe: standardTimeframe,
+    confidence: 50 + (seed % 20),
     bullish: !isBullishTrend,
     description: smcDescriptions[oppositePattern as keyof typeof smcDescriptions] || 
                "Conflicting pattern detected, suggesting caution."
@@ -150,12 +172,48 @@ export const analyzeTechnicalPatterns = (
   return mockPatterns.sort((a, b) => b.confidence - a.confidence);
 };
 
+// Helper function for deterministic "random" shuffling
+function deterministicShuffle<T>(array: T[], seed: number): T[] {
+  const result = [...array];
+  let currentSeed = seed;
+  
+  for (let i = result.length - 1; i > 0; i--) {
+    // Generate next pseudorandom number
+    currentSeed = (currentSeed * 9301 + 49297) % 233280;
+    const j = currentSeed % (i + 1);
+    
+    // Swap elements
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  
+  return result;
+}
+
+// Simple hash function for strings
+function hashString(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  return Math.abs(hash);
+}
+
 // Analyze market sentiment from news
 export const analyzeSentiment = (news: NewsItem[]): {
   sentiment: "positive" | "negative" | "neutral";
   score: number;
   impactfulNews: NewsItem[];
 } => {
+  if (!news || news.length === 0) {
+    return {
+      sentiment: "neutral",
+      score: 50,
+      impactfulNews: []
+    };
+  }
+  
   let sentimentScore = 0;
   const impactfulNews: NewsItem[] = [];
   
@@ -188,6 +246,15 @@ export const analyzeFundamentals = (fundamental: FundamentalData): {
 } => {
   let score = 50; // Neutral starting point
   const highlights: string[] = [];
+  
+  // Handle missing data
+  if (!fundamental) {
+    return {
+      outlook: "neutral",
+      score: 50,
+      highlights: ["Insufficient fundamental data available"]
+    };
+  }
   
   // PE ratio analysis
   if (fundamental.pe !== undefined) {
@@ -253,7 +320,7 @@ export const analyzeFundamentals = (fundamental: FundamentalData): {
   return {
     outlook,
     score,
-    highlights: highlights.slice(0, 3) // Return top 3 highlights
+    highlights: highlights.length > 0 ? highlights.slice(0, 3) : ["No significant fundamental highlights"] // Return top 3 highlights
   };
 };
 
@@ -263,7 +330,8 @@ export const generateSignal = (
   marketData: MarketData,
   candles: CandleData[],
   fundData: FundamentalData,
-  news: NewsItem[]
+  news: NewsItem[],
+  timeframe: string
 ): AnalysisResult => {
   if (!marketData || !candles || candles.length === 0) {
     // Default signal for error cases
@@ -283,7 +351,11 @@ export const generateSignal = (
     };
   }
 
-  const technicalPatterns = analyzeTechnicalPatterns(symbol, candles);
+  // Map the chart timeframe to analysis timeframe
+  const analysisTimeframe = mapChartTimeframeToAnalysisTimeframe(timeframe);
+  
+  // Get patterns specific to the selected timeframe
+  const technicalPatterns = analyzeTechnicalPatterns(symbol, candles, timeframe);
   const sentiment = analyzeSentiment(news);
   const fundamentals = analyzeFundamentals(fundData);
   
@@ -293,10 +365,27 @@ export const generateSignal = (
     0
   ) / (technicalPatterns.length * 100) * 100;
   
-  // Weight the different analysis components
-  const technicalWeight = 0.5;
-  const fundamentalWeight = 0.3;
-  const sentimentWeight = 0.2;
+  // Weight the different analysis components differently based on timeframe
+  let technicalWeight, fundamentalWeight, sentimentWeight;
+  
+  // Short-term timeframes give more weight to technical factors
+  if (timeframe === "1m" || timeframe === "5m" || timeframe === "15m") {
+    technicalWeight = 0.8;
+    fundamentalWeight = 0.05;
+    sentimentWeight = 0.15;
+  } 
+  // Medium-term timeframes balance technical and fundamental
+  else if (timeframe === "1H" || timeframe === "4H" || timeframe === "1D") {
+    technicalWeight = 0.5;
+    fundamentalWeight = 0.3;
+    sentimentWeight = 0.2;
+  } 
+  // Long-term timeframes give more weight to fundamentals
+  else {
+    technicalWeight = 0.3;
+    fundamentalWeight = 0.5;
+    sentimentWeight = 0.2;
+  }
   
   // Normalize technical score to 0-100
   const normalizedTechnicalScore = (technicalScore + 100) / 2;
@@ -338,7 +427,7 @@ export const generateSignal = (
   // Calculate risk/reward ratio
   const risk = Math.abs(currentPrice - stopLoss);
   const reward = Math.abs(targetPrice - currentPrice);
-  const riskRewardRatio = reward / risk;
+  const riskRewardRatio = risk > 0 ? reward / risk : 1;
   
   // Generate reasoning with ICT/SMC terminology
   const reasoning: string[] = [];
@@ -348,14 +437,14 @@ export const generateSignal = (
   const bearishPatterns = technicalPatterns.filter(p => !p.bullish);
   
   if (bullishPatterns.length > 0) {
-    reasoning.push(`SMC analysis shows ${bullishPatterns.length} bullish patterns including ${bullishPatterns[0]?.name} on ${bullishPatterns[0]?.timeframe} timeframe`);
+    reasoning.push(`SMC analysis on ${timeframeMapping[timeframe] || timeframe} timeframe shows ${bullishPatterns.length} bullish patterns including ${bullishPatterns[0]?.name}`);
     if (bullishPatterns[0]) {
       reasoning.push(bullishPatterns[0].description);
     }
   }
   
   if (bearishPatterns.length > 0) {
-    reasoning.push(`SMC analysis shows ${bearishPatterns.length} bearish patterns including ${bearishPatterns[0]?.name} on ${bearishPatterns[0]?.timeframe} timeframe`);
+    reasoning.push(`SMC analysis on ${timeframeMapping[timeframe] || timeframe} timeframe shows ${bearishPatterns.length} bearish patterns including ${bearishPatterns[0]?.name}`);
     if (signal === "sell" || signal === "strong_sell") {
       if (bearishPatterns[0]) {
         reasoning.push(bearishPatterns[0].description);
@@ -364,12 +453,14 @@ export const generateSignal = (
   }
   
   // Add market structure analysis
-  reasoning.push(`Market structure shows ${signal.includes('buy') ? 'bullish' : signal.includes('sell') ? 'bearish' : 'neutral'} bias with ${signal.includes('strong') ? 'strong' : 'moderate'} confirmation`);
+  reasoning.push(`Market structure on ${timeframeMapping[timeframe] || timeframe} shows ${signal.includes('buy') ? 'bullish' : signal.includes('sell') ? 'bearish' : 'neutral'} bias with ${signal.includes('strong') ? 'strong' : 'moderate'} confirmation`);
   
-  // Add fundamental reasoning
-  reasoning.push(`Fundamental outlook is ${fundamentals.outlook} (${Math.round(fundamentals.score)}/100)`);
-  if (fundamentals.highlights.length > 0) {
-    reasoning.push(fundamentals.highlights[0]);
+  // Add fundamental reasoning for medium and long timeframes
+  if (timeframe !== "1m" && timeframe !== "5m" && timeframe !== "15m") {
+    reasoning.push(`Fundamental outlook is ${fundamentals.outlook} (${Math.round(fundamentals.score)}/100)`);
+    if (fundamentals.highlights.length > 0) {
+      reasoning.push(fundamentals.highlights[0]);
+    }
   }
   
   // Add sentiment reasoning
@@ -383,7 +474,7 @@ export const generateSignal = (
     signal,
     confidence: Math.round(combinedScore),
     source: "combined",
-    timeFrame: "medium",
+    timeFrame: analysisTimeframe,
     reasoning,
     support: parseFloat(support.toFixed(2)),
     resistance: parseFloat(resistance.toFixed(2)),
@@ -393,3 +484,22 @@ export const generateSignal = (
     timestamp: Date.now()
   };
 };
+
+// Map chart timeframes to analysis timeframes
+function mapChartTimeframeToAnalysisTimeframe(timeframe: string): TimeFrame {
+  switch (timeframe) {
+    case "1m":
+    case "5m":
+    case "15m":
+      return "short";
+    case "1H":
+    case "4H": 
+    case "1D":
+      return "medium";
+    case "1W":
+    case "1M":
+      return "long";
+    default:
+      return "medium";
+  }
+}

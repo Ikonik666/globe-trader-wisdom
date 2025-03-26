@@ -47,7 +47,7 @@ const NewsCard: React.FC<NewsCardProps> = ({ news }) => {
       <CardContent className="p-4 pt-0">
         <div className="space-y-4 max-h-[400px] overflow-y-auto pr-1">
           {news.map((item) => (
-            <React.Fragment key={item.id}>
+            <div key={item.id} className="space-y-3">
               <div className="space-y-2">
                 <div className="flex items-start justify-between">
                   <h3 className="font-medium text-base">{item.title}</h3>
@@ -79,7 +79,7 @@ const NewsCard: React.FC<NewsCardProps> = ({ news }) => {
                 )}
               </div>
               <Separator className="my-3" />
-            </React.Fragment>
+            </div>
           ))}
         </div>
       </CardContent>

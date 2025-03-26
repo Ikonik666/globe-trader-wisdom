@@ -1,3 +1,4 @@
+
 import { MarketType } from './marketSymbols';
 
 // Market data types
@@ -91,6 +92,80 @@ const forexData: MarketData[] = [
   { symbol: "NZDUSD", name: "New Zealand Dollar/US Dollar", price: 0.6143, change: -0.0021, changePercent: -0.34, volume: 21987654 },
 ];
 
+// Generate deterministic price data based on symbol and timeframe
+// This ensures the same data is returned for a given symbol and timeframe
+function generateDeterministicData(symbol: string, timeframe: string, basePrice: number, volatility: number): CandleData[] {
+  const data: CandleData[] = [];
+  const now = new Date().getTime();
+  
+  // Determine interval and data points based on timeframe
+  let interval = 86400000; // Default: 1 day in milliseconds
+  let dataPoints = 30;
+  
+  switch (timeframe) {
+    case "1m": interval = 60000; dataPoints = 60; break;
+    case "5m": interval = 300000; dataPoints = 60; break;
+    case "15m": interval = 900000; dataPoints = 60; break;
+    case "1H": interval = 3600000; dataPoints = 48; break;
+    case "4H": interval = 14400000; dataPoints = 48; break;
+    case "1D": interval = 86400000; dataPoints = 30; break;
+    case "1W": interval = 604800000; dataPoints = 20; break;
+    case "1M": interval = 2592000000; dataPoints = 12; break;
+    default: interval = 86400000; dataPoints = 30;
+  }
+  
+  // Use string hash function to create a deterministic seed
+  const seed = hashStringToNumber(symbol + timeframe);
+  let currentPrice = basePrice;
+  
+  // Generate candles with deterministic values
+  for (let i = 0; i < dataPoints; i++) {
+    const time = now - ((dataPoints - i) * interval);
+    
+    // Use deterministic "random" values based on symbol, timeframe, and iteration
+    const priceDelta = ((((seed * (i + 1)) % 100) / 100) - 0.5) * volatility * currentPrice;
+    const open = currentPrice;
+    const close = open + priceDelta;
+    
+    // Ensure high is always higher than both open and close
+    const highAddition = Math.abs(((seed * (i + 2)) % 100) / 100) * volatility * currentPrice * 0.5;
+    const high = Math.max(open, close) + highAddition;
+    
+    // Ensure low is always lower than both open and close
+    const lowSubtraction = Math.abs(((seed * (i + 3)) % 100) / 100) * volatility * currentPrice * 0.5;
+    const low = Math.min(open, close) - lowSubtraction;
+    
+    // Volume based on the seed and iteration
+    const volume = 1000000 + (seed * (i+1) % 10000000);
+    
+    data.push({
+      time,
+      open,
+      high,
+      low,
+      close,
+      volume: Math.floor(volume)
+    });
+    
+    // Update price for next candle
+    currentPrice = close;
+  }
+  
+  return data;
+}
+
+// Simple hash function to convert string to number for seed
+function hashStringToNumber(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  // Make sure it's always positive
+  return Math.abs(hash);
+}
+
 // Get market data based on market type
 export const getMarketData = (marketType: MarketType = "stocks"): MarketData[] => {
   switch (marketType) {
@@ -105,41 +180,8 @@ export const getMarketData = (marketType: MarketType = "stocks"): MarketData[] =
   }
 };
 
-// Generate mock candle data for charts
+// Generate consistent candle data for charts based on symbol and timeframe
 export const getCandleData = (symbol: string, timeframe: string): CandleData[] => {
-  const now = new Date().getTime();
-  const data: CandleData[] = [];
-  
-  // Generate realistic candle data based on timeframe
-  let interval = 86400000; // 1 day in milliseconds
-  let dataPoints = 30;
-  
-  if (timeframe === "1m") {
-    interval = 60000; // 1 minute
-    dataPoints = 60;
-  } else if (timeframe === "5m") {
-    interval = 300000; // 5 minutes
-    dataPoints = 60;
-  } else if (timeframe === "15m") {
-    interval = 900000; // 15 minutes
-    dataPoints = 60;
-  } else if (timeframe === "1H") {
-    interval = 3600000; // 1 hour
-    dataPoints = 48;
-  } else if (timeframe === "4H") {
-    interval = 14400000; // 4 hours
-    dataPoints = 48;
-  } else if (timeframe === "1D") {
-    interval = 86400000; // 1 day
-    dataPoints = 30;
-  } else if (timeframe === "1W") {
-    interval = 604800000; // 1 week
-    dataPoints = 20;
-  } else if (timeframe === "1M") {
-    interval = 2592000000; // 30 days
-    dataPoints = 12;
-  }
-  
   // Find the corresponding market data for the symbol
   let basePrice = 100;
   let volatility = 0.02;
@@ -159,30 +201,7 @@ export const getCandleData = (symbol: string, timeframe: string): CandleData[] =
     }
   }
   
-  // Generate candles
-  for (let i = 0; i < dataPoints; i++) {
-    const time = now - ((dataPoints - i) * interval);
-    const priceDelta = (Math.random() - 0.5) * volatility * basePrice;
-    const open = basePrice + priceDelta;
-    const high = open * (1 + Math.random() * volatility * 0.5);
-    const low = open * (1 - Math.random() * volatility * 0.5);
-    const close = (open + high + low) / 3 + (Math.random() - 0.5) * volatility * basePrice * 0.5;
-    const volume = Math.floor(Math.random() * 10000000) + 1000000;
-    
-    data.push({
-      time,
-      open,
-      high: Math.max(open, close, high),
-      low: Math.min(open, close, low),
-      close,
-      volume
-    });
-    
-    // Update base price for next candle
-    basePrice = close;
-  }
-  
-  return data;
+  return generateDeterministicData(symbol, timeframe, basePrice, volatility);
 };
 
 // Get fundamental data for a symbol
@@ -195,25 +214,28 @@ export const getFundamentalData = (symbol: string): FundamentalData => {
     return { symbol, name: "Unknown" };
   }
   
+  // Use symbol as seed for deterministic values
+  const seed = hashStringToNumber(symbol);
+  
   if (symbol.includes("USD") && (symbol.includes("BTC") || symbol.includes("ETH"))) {
     // Crypto fundamental data
     return {
       symbol,
       name: marketData.name,
-      marketCap: Math.random() * 1000000000000,
+      marketCap: 1000000000 * (seed % 1000),
       sector: "Cryptocurrency",
       industry: "Digital Assets",
-      avgVolume: Math.random() * 10000000000,
-      high52W: marketData.price * (1 + Math.random() * 0.5),
-      low52W: marketData.price * (1 - Math.random() * 0.5),
-      revenue: Math.random() * 1000000000,
-      revenueGrowth: Math.random() * 30 - 10,
-      profit: Math.random() * 500000000,
-      profitGrowth: Math.random() * 40 - 15,
-      debt: Math.random() * 100000000,
-      assets: Math.random() * 2000000000,
-      pe: 15 + Math.random() * 25,
-      eps: Math.random() * 5,
+      avgVolume: 1000000 * (seed % 10000),
+      high52W: marketData.price * (1 + (seed % 100) / 200),
+      low52W: marketData.price * (1 - (seed % 100) / 200),
+      revenue: 10000000 * (seed % 100),
+      revenueGrowth: ((seed % 50) - 10),
+      profit: 5000000 * (seed % 100),
+      profitGrowth: ((seed % 60) - 15),
+      debt: 1000000 * (seed % 100),
+      assets: 20000000 * (seed % 100),
+      pe: 15 + (seed % 25),
+      eps: (seed % 500) / 100,
       dividendYield: 0,
     };
   } else if (symbol.includes("USD") || symbol.includes("EUR") || symbol.includes("GBP")) {
@@ -223,46 +245,49 @@ export const getFundamentalData = (symbol: string): FundamentalData => {
       name: marketData.name,
       sector: "Forex",
       industry: "Currency Exchange",
-      beta: Math.random() * 0.5,
-      avgVolume: Math.random() * 100000000000,
-      high52W: marketData.price * (1 + Math.random() * 0.1),
-      low52W: marketData.price * (1 - Math.random() * 0.1),
+      beta: (seed % 100) / 200,
+      avgVolume: 10000000 * (seed % 10000),
+      high52W: marketData.price * (1 + (seed % 20) / 200),
+      low52W: marketData.price * (1 - (seed % 20) / 200),
       revenue: 0,
       revenueGrowth: 0,
       profit: 0,
       profitGrowth: 0,
       debt: 0,
-      assets: Math.random() * 1000000000000,
+      assets: 10000000000 * (seed % 100),
       pe: 0,
       eps: 0,
       dividendYield: 0,
     };
   } else {
     // Stock fundamental data
+    const sectors = ["Technology", "Healthcare", "Finance", "Energy", "Consumer Goods"];
+    const industries = ["Software", "Hardware", "Biotech", "Banking", "Oil & Gas", "Retail"];
+    
     return {
       symbol,
       name: marketData.name,
-      sector: ["Technology", "Healthcare", "Finance", "Energy", "Consumer Goods"][Math.floor(Math.random() * 5)],
-      industry: ["Software", "Hardware", "Biotech", "Banking", "Oil & Gas", "Retail"][Math.floor(Math.random() * 6)],
-      marketCap: Math.random() * 2000000000000,
-      pe: 10 + Math.random() * 30,
-      eps: Math.random() * 10,
-      dividend: Math.random() * 5,
-      dividendYield: Math.random() * 0.05,
-      beta: 0.5 + Math.random() * 1.5,
-      avgVolume: Math.random() * 50000000,
-      high52W: marketData.price * (1 + Math.random() * 0.3),
-      low52W: marketData.price * (1 - Math.random() * 0.3),
-      priceToBook: 1 + Math.random() * 10,
-      priceToSales: 1 + Math.random() * 20,
-      shortRatio: Math.random() * 10,
-      shortFloat: Math.random() * 0.2,
-      revenue: Math.random() * 50000000000,
-      revenueGrowth: Math.random() * 30 - 5,
-      profit: Math.random() * 10000000000,
-      profitGrowth: Math.random() * 35 - 10,
-      debt: Math.random() * 20000000000,
-      assets: Math.random() * 100000000000,
+      sector: sectors[seed % sectors.length],
+      industry: industries[seed % industries.length],
+      marketCap: 1000000000 * (seed % 2000),
+      pe: 10 + (seed % 30),
+      eps: (seed % 1000) / 100,
+      dividend: (seed % 500) / 100,
+      dividendYield: (seed % 500) / 10000,
+      beta: 0.5 + (seed % 150) / 100,
+      avgVolume: 1000000 * (seed % 50),
+      high52W: marketData.price * (1 + (seed % 30) / 100),
+      low52W: marketData.price * (1 - (seed % 30) / 100),
+      priceToBook: 1 + (seed % 1000) / 100,
+      priceToSales: 1 + (seed % 2000) / 100,
+      shortRatio: (seed % 1000) / 100,
+      shortFloat: (seed % 20) / 100,
+      revenue: 1000000000 * (seed % 50),
+      revenueGrowth: ((seed % 35) - 5),
+      profit: 100000000 * (seed % 100),
+      profitGrowth: ((seed % 45) - 10),
+      debt: 100000000 * (seed % 200),
+      assets: 1000000000 * (seed % 100),
     };
   }
 };
