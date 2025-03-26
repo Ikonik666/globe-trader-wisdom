@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -26,11 +25,9 @@ const Dashboard: React.FC = () => {
   const [marketType, setMarketType] = useState<MarketType>("stocks");
   
   useEffect(() => {
-    // Load initial market data based on market type
     loadMarketData(marketType);
   }, []);
 
-  // Load market data based on the selected market type
   const loadMarketData = (type: MarketType) => {
     const marketData = getMarketData(type);
     setMarkets(marketData);
@@ -65,20 +62,20 @@ const Dashboard: React.FC = () => {
         marketData,
         candles,
         fundamentalData,
-        newsData
+        newsData,
+        "1M"
       );
       
       setSignal(generatedSignal);
       setLoading(false);
       
-      // Notify user about new signal
       toast({
         title: `New ${generatedSignal.signal.replace('_', ' ').toUpperCase()} Signal`,
         description: `${symbol}: ${generatedSignal.reasoning[0]}`,
         variant: generatedSignal.signal.includes('buy') ? "default" : 
                  generatedSignal.signal.includes('sell') ? "destructive" : "default",
       });
-    }, 500); // Simulate API call delay
+    }, 500);
   };
   
   useEffect(() => {
@@ -89,7 +86,6 @@ const Dashboard: React.FC = () => {
   
   const refreshData = () => {
     setLoading(true);
-    // Simulate data refresh
     setTimeout(() => {
       const newMarkets = getMarketData(marketType);
       setMarkets(newMarkets);
