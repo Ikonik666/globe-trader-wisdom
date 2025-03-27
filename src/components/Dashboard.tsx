@@ -15,7 +15,7 @@ import MarketChart from './MarketChart';
 import FundamentalData from './FundamentalData';
 import NewsCard from './NewsCard';
 import { toast } from "@/components/ui/use-toast";
-import { Search, RefreshCcw, ArrowDownUp, Bitcoin, DollarSign, BarChart, TrendingUp } from 'lucide-react';
+import { Search, RefreshCcw, ArrowDownUp, Bitcoin, DollarSign, BarChart, TrendingUp, AlertTriangle, Info } from 'lucide-react';
 import { MarketType, getSymbolsByMarketType } from '@/utils/marketSymbols';
 
 const Dashboard: React.FC = () => {
@@ -28,6 +28,7 @@ const Dashboard: React.FC = () => {
   const [marketType, setMarketType] = useState<MarketType>("stocks");
   const [currentTimeframe, setCurrentTimeframe] = useState("1D");
   const [usingLiveData, setUsingLiveData] = useState(false);
+  const [rateLimited, setRateLimited] = useState(false);
   
   useEffect(() => {
     loadMarketData(marketType);
@@ -44,21 +45,35 @@ const Dashboard: React.FC = () => {
       if (data && data.length > 0) {
         setMarkets(data);
         setUsingLiveData(true);
+        setRateLimited(false);
         
         // Set initial symbol based on market type
         const initialSymbol = type === "crypto" ? "BTCUSD" : data[0].symbol;
         setActiveSymbol(initialSymbol);
         generateSignalForSymbol(initialSymbol, data, currentTimeframe);
-      } else {
-        // Fallback to mock data if API fails or returns empty
-        const mockData = getMarketData(type);
-        setMarkets(mockData);
-        setUsingLiveData(false);
         
-        // Set initial symbol based on market type
-        const initialSymbol = type === "crypto" ? "BTCUSD" : mockData[0].symbol;
-        setActiveSymbol(initialSymbol);
-        generateSignalForSymbol(initialSymbol, mockData, currentTimeframe);
+        toast({
+          title: "Live Data Loaded",
+          description: "Using real-time market data from Alpha Vantage.",
+        });
+      } else {
+        throw new Error("No data returned from API");
+      }
+    } catch (error) {
+      console.error("Error loading market data:", error);
+      
+      // Check if it's a rate limit error
+      if (error instanceof Error && error.message.includes("rate limit")) {
+        setRateLimited(true);
+        setLoadError("API rate limit reached. Using demo data instead. Please try again later or upgrade your API plan.");
+        
+        toast({
+          title: "API Rate Limit Reached",
+          description: "Alpha Vantage limits free accounts to 25 requests per day. Using demo data instead.",
+          variant: "destructive",
+        });
+      } else {
+        setLoadError("Failed to load market data. Using mock data instead.");
         
         toast({
           title: "Using Mock Data",
@@ -66,9 +81,6 @@ const Dashboard: React.FC = () => {
           variant: "destructive",
         });
       }
-    } catch (error) {
-      console.error("Error loading market data:", error);
-      setLoadError("Failed to load market data. Using mock data instead.");
       
       // Fallback to mock data
       const mockData = getMarketData(type);
@@ -101,13 +113,32 @@ const Dashboard: React.FC = () => {
       let candles;
       let fundamentalData;
       
-      if (usingLiveData) {
+      if (usingLiveData && !rateLimited) {
         // Try to use live data
         try {
           candles = await fetchCandleData(symbol, timeframe);
           fundamentalData = await fetchFundamentalData(symbol);
         } catch (error) {
           console.error("Error fetching live data:", error);
+          
+          // Check if it's a rate limit error
+          if (error instanceof Error && error.message.includes("rate limit")) {
+            setRateLimited(true);
+            setLoadError("API rate limit reached. Using demo data for charts. Please try again later or upgrade your API plan.");
+            
+            toast({
+              title: "API Rate Limit Reached",
+              description: "Using demo data for charts now. The free API allows only 25 requests per day.",
+              variant: "destructive",
+            });
+          } else {
+            toast({
+              title: "Data Fetch Error",
+              description: "Using mock data for charts. Could not fetch live chart data.",
+              variant: "destructive",
+            });
+          }
+          
           // Fallback to mock data
           candles = getCandleData(symbol, timeframe);
           fundamentalData = getFundamentalData(symbol);
@@ -190,13 +221,26 @@ const Dashboard: React.FC = () => {
           <p className="text-muted-foreground">
             Smart Money Concepts & Institutional Analysis
             {usingLiveData ? (
-              <Badge variant="outline" className="ml-2">Live Data</Badge>
+              rateLimited ? (
+                <Badge variant="outline" className="ml-2 bg-yellow-100 text-yellow-800">API Rate Limited</Badge>
+              ) : (
+                <Badge variant="outline" className="ml-2">Live Data</Badge>
+              )
             ) : (
               <Badge variant="outline" className="ml-2 bg-yellow-100 text-yellow-800">Demo Data</Badge>
             )}
           </p>
           {loadError && (
-            <p className="text-sm text-destructive mt-1">{loadError}</p>
+            <div className="flex items-center text-sm text-destructive mt-1">
+              <AlertTriangle className="h-4 w-4 mr-1" />
+              {loadError}
+            </div>
+          )}
+          {rateLimited && (
+            <div className="flex items-center text-xs text-muted-foreground mt-1 max-w-md">
+              <Info className="h-3 w-3 mr-1 flex-shrink-0" />
+              <span>Alpha Vantage free tier is limited to 25 API calls per day. Consider upgrading your API key for more requests.</span>
+            </div>
           )}
         </div>
         <div className="mt-4 md:mt-0 flex items-center space-x-2">

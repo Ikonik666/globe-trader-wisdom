@@ -4,6 +4,8 @@ import Layout from '@/components/Layout';
 import Dashboard from '@/components/Dashboard';
 import ApiKeyInput from '@/components/ApiKeyInput';
 import { Toaster } from "@/components/ui/toaster";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { InfoCircledIcon } from "@radix-ui/react-icons";
 
 const Index = () => {
   const [apiKey, setApiKey] = useState<string | null>(null);
@@ -13,6 +15,8 @@ const Index = () => {
     setApiKey(key);
     // Update the global API_KEY variable in the window object
     (window as any).ALPHA_VANTAGE_API_KEY = key;
+    localStorage.setItem('alphaVantageApiKey', key);
+    window.location.reload(); // Reload to apply new API key
   };
   
   useEffect(() => {
@@ -27,6 +31,16 @@ const Index = () => {
   return (
     <Layout>
       <div className="container mx-auto px-4">
+        {!apiKey && (
+          <Alert className="mb-4">
+            <InfoCircledIcon className="h-4 w-4" />
+            <AlertTitle>API Key Required</AlertTitle>
+            <AlertDescription>
+              Please enter your Alpha Vantage API key to access live market data. Free tier is limited to 25 API calls per day.
+              You can get a free API key at <a href="https://www.alphavantage.co/support/#api-key" className="underline" target="_blank" rel="noopener noreferrer">alphavantage.co</a>
+            </AlertDescription>
+          </Alert>
+        )}
         <div className="flex justify-end mb-2">
           <ApiKeyInput onApiKeySubmit={handleApiKeySubmit} />
         </div>

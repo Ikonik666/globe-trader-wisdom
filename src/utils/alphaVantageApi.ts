@@ -17,6 +17,15 @@ const getApiKey = (): string => {
   return "demo"; // Alpha Vantage provides a demo key with limited functionality
 };
 
+// Check if API response contains rate limit message
+const isRateLimited = (data: any): boolean => {
+  return data && (
+    data.Note?.includes("API rate limit") || 
+    data.Information?.includes("API rate limit") ||
+    data.Information?.includes("standard API rate limit")
+  );
+};
+
 // Fetch current price data for a symbol
 export async function fetchCurrentPrice(symbol: string): Promise<{ price: number; change: number; changePercent: number }> {
   try {
@@ -25,6 +34,12 @@ export async function fetchCurrentPrice(symbol: string): Promise<{ price: number
     const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${apiKey}`;
     const response = await fetch(url);
     const data = await response.json();
+    
+    // Check for rate limiting
+    if (isRateLimited(data)) {
+      console.warn("Alpha Vantage API rate limit reached:", data);
+      throw new Error("API rate limit reached");
+    }
     
     if (data["Global Quote"]) {
       const quote = data["Global Quote"];
@@ -36,10 +51,10 @@ export async function fetchCurrentPrice(symbol: string): Promise<{ price: number
     }
     
     // If no data or error, return default values
-    return { price: 0, change: 0, changePercent: 0 };
+    throw new Error("No price data available");
   } catch (error) {
     console.error("Error fetching price data:", error);
-    return { price: 0, change: 0, changePercent: 0 };
+    throw error; // Re-throw to handle in calling function
   }
 }
 
@@ -53,6 +68,12 @@ export async function fetchCryptoPrice(symbol: string): Promise<{ price: number;
     const url = `https://www.alphavantage.co/query?function=DIGITAL_CURRENCY_DAILY&symbol=${cryptoSymbol}&market=USD&apikey=${apiKey}`;
     const response = await fetch(url);
     const data = await response.json();
+    
+    // Check for rate limiting
+    if (isRateLimited(data)) {
+      console.warn("Alpha Vantage API rate limit reached:", data);
+      throw new Error("API rate limit reached");
+    }
     
     if (data["Time Series (Digital Currency Daily)"]) {
       const timeSeries = data["Time Series (Digital Currency Daily)"];
@@ -71,10 +92,10 @@ export async function fetchCryptoPrice(symbol: string): Promise<{ price: number;
       }
     }
     
-    return { price: 0, change: 0, changePercent: 0 };
+    throw new Error("No crypto data available");
   } catch (error) {
     console.error("Error fetching crypto data:", error);
-    return { price: 0, change: 0, changePercent: 0 };
+    throw error; // Re-throw to handle in calling function
   }
 }
 
@@ -84,28 +105,49 @@ export async function fetchMarketData(marketType: MarketType): Promise<MarketDat
     // Get symbols for the specified market type
     const symbols = getSymbolsForMarketType(marketType);
     const promises = symbols.map(async (symbol) => {
-      let priceData;
-      
-      if (marketType === "crypto") {
-        priceData = await fetchCryptoPrice(symbol.symbol);
-      } else {
-        priceData = await fetchCurrentPrice(symbol.symbol);
+      try {
+        let priceData;
+        
+        if (marketType === "crypto") {
+          priceData = await fetchCryptoPrice(symbol.symbol);
+        } else {
+          priceData = await fetchCurrentPrice(symbol.symbol);
+        }
+        
+        return {
+          symbol: symbol.symbol,
+          name: symbol.name,
+          price: priceData.price,
+          change: priceData.change,
+          changePercent: priceData.changePercent,
+          volume: 0, // Alpha Vantage doesn't provide volume in the basic quote endpoint
+        };
+      } catch (error) {
+        console.warn(`Could not fetch data for ${symbol.symbol}:`, error);
+        // Return a placeholder with error indication for this symbol
+        return {
+          symbol: symbol.symbol,
+          name: symbol.name,
+          price: 0,
+          change: 0,
+          changePercent: 0,
+          volume: 0,
+          error: true
+        };
       }
-      
-      return {
-        symbol: symbol.symbol,
-        name: symbol.name,
-        price: priceData.price,
-        change: priceData.change,
-        changePercent: priceData.changePercent,
-        volume: 0, // Alpha Vantage doesn't provide volume in the basic quote endpoint
-      };
     });
     
-    return await Promise.all(promises);
+    const results = await Promise.all(promises);
+    
+    // If all results have errors, throw an exception to trigger fallback
+    if (results.every(result => (result as any).error)) {
+      throw new Error("Could not fetch any market data - API limit reached");
+    }
+    
+    return results;
   } catch (error) {
     console.error("Error fetching market data:", error);
-    return [];
+    throw error;
   }
 }
 
@@ -185,6 +227,12 @@ export async function fetchCandleData(symbol: string, timeframe: string): Promis
     const response = await fetch(url);
     const data = await response.json();
     
+    // Check for rate limiting
+    if (isRateLimited(data)) {
+      console.warn("Alpha Vantage API rate limit reached:", data);
+      throw new Error("API rate limit reached");
+    }
+    
     // Parse the response based on the data structure
     const candleData: CandleData[] = [];
     
@@ -204,39 +252,40 @@ export async function fetchCandleData(symbol: string, timeframe: string): Promis
       timeSeries = data[`Time Series (${interval})`];
     }
     
-    if (timeSeries) {
-      // Convert time series object to array and sort by date
-      const entries = Object.entries(timeSeries).sort((a, b) => new Date(a[0]).getTime() - new Date(b[0]).getTime());
+    if (!timeSeries || Object.keys(timeSeries).length === 0) {
+      throw new Error("No candle data available");
+    }
+    
+    // Convert time series object to array and sort by date
+    const entries = Object.entries(timeSeries).sort((a, b) => new Date(a[0]).getTime() - new Date(b[0]).getTime());
+    
+    for (const [timestamp, values] of entries) {
+      const time = new Date(timestamp).getTime();
       
-      for (const [timestamp, values] of entries) {
-        const time = new Date(timestamp).getTime();
-        
-        // Extract OHLCV data
-        let open, high, low, close, volume;
-        
-        if (isCrypto && ["daily", "weekly", "monthly"].includes(interval)) {
-          open = parseFloat(values["1a. open (USD)"]);
-          high = parseFloat(values["2a. high (USD)"]);
-          low = parseFloat(values["3a. low (USD)"]);
-          close = parseFloat(values["4a. close (USD)"]);
-          volume = parseFloat(values["5. volume"]);
-        } else {
-          open = parseFloat(values["1. open"]);
-          high = parseFloat(values["2. high"]);
-          low = parseFloat(values["3. low"]);
-          close = parseFloat(values["4. close"]);
-          volume = parseFloat(values["5. volume"]);
-        }
-        
-        candleData.push({ time, open, high, low, close, volume });
+      // Extract OHLCV data
+      let open, high, low, close, volume;
+      
+      if (isCrypto && ["daily", "weekly", "monthly"].includes(interval)) {
+        open = parseFloat(values["1a. open (USD)"]);
+        high = parseFloat(values["2a. high (USD)"]);
+        low = parseFloat(values["3a. low (USD)"]);
+        close = parseFloat(values["4a. close (USD)"]);
+        volume = parseFloat(values["5. volume"]);
+      } else {
+        open = parseFloat(values["1. open"]);
+        high = parseFloat(values["2. high"]);
+        low = parseFloat(values["3. low"]);
+        close = parseFloat(values["4. close"]);
+        volume = parseFloat(values["5. volume"]);
       }
+      
+      candleData.push({ time, open, high, low, close, volume });
     }
     
     return candleData;
   } catch (error) {
     console.error("Error fetching candle data:", error);
-    // Fallback to existing function for testing
-    return [];
+    throw error;
   }
 }
 
@@ -248,6 +297,12 @@ export async function fetchFundamentalData(symbol: string): Promise<FundamentalD
     const url = `https://www.alphavantage.co/query?function=OVERVIEW&symbol=${symbol}&apikey=${apiKey}`;
     const response = await fetch(url);
     const data = await response.json();
+    
+    // Check for rate limiting
+    if (isRateLimited(data)) {
+      console.warn("Alpha Vantage API rate limit reached:", data);
+      throw new Error("API rate limit reached");
+    }
     
     if (data.Symbol) {
       return {
@@ -288,6 +343,6 @@ export async function fetchFundamentalData(symbol: string): Promise<FundamentalD
     };
   } catch (error) {
     console.error("Error fetching fundamental data:", error);
-    return { symbol, name: symbol };
+    throw error;
   }
 }
