@@ -5,7 +5,7 @@ import Dashboard from '@/components/Dashboard';
 import ApiKeyInput from '@/components/ApiKeyInput';
 import { Toaster } from "@/components/ui/toaster";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { InfoCircledIcon } from "@radix-ui/react-icons";
+import { InfoIcon } from "lucide-react";
 
 const Index = () => {
   const [apiKey, setApiKey] = useState<string | null>(null);
@@ -33,7 +33,7 @@ const Index = () => {
       <div className="container mx-auto px-4">
         {!apiKey && (
           <Alert className="mb-4">
-            <InfoCircledIcon className="h-4 w-4" />
+            <InfoIcon className="h-4 w-4" />
             <AlertTitle>API Key Required</AlertTitle>
             <AlertDescription>
               Please enter your Alpha Vantage API key to access live market data. Free tier is limited to 25 API calls per day.
