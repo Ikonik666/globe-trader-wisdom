@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { LineChart, Line, AreaChart, Area, BarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { CandleData, getCandleData } from '@/utils/marketData';
+import { fetchCandleData } from '@/utils/alphaVantageApi';
 import { PatternDetection, analyzeTechnicalPatterns } from '@/utils/analysis';
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/components/ui/use-toast";
@@ -19,6 +20,7 @@ interface MarketChartProps {
   changePercent: number;
   onTimeframeChange?: (timeframe: string) => void;
   currentTimeframe?: string;
+  usingLiveData?: boolean;
 }
 
 const MarketChart: React.FC<MarketChartProps> = ({ 
@@ -28,7 +30,8 @@ const MarketChart: React.FC<MarketChartProps> = ({
   change,
   changePercent,
   onTimeframeChange,
-  currentTimeframe = "1D"
+  currentTimeframe = "1D",
+  usingLiveData = false
 }) => {
   const [timeframe, setTimeframe] = useState(currentTimeframe);
   const [chartType, setChartType] = useState("candle");
@@ -38,6 +41,8 @@ const MarketChart: React.FC<MarketChartProps> = ({
   const [showDrawingTools, setShowDrawingTools] = useState(false);
   const [showIndicators, setShowIndicators] = useState(false);
   const [marketType, setMarketType] = useState<MarketType>("stocks");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const chartRef = useRef<HTMLDivElement>(null);
   
   useEffect(() => {
@@ -47,23 +52,60 @@ const MarketChart: React.FC<MarketChartProps> = ({
   }, [currentTimeframe]);
   
   useEffect(() => {
-    const data = getCandleData(symbol, timeframe);
-    setChartData(data);
-    
-    const detectedPatterns = analyzeTechnicalPatterns(symbol, data, timeframe);
-    setPatterns(detectedPatterns);
-    
-    if (detectedPatterns.length > 0) {
-      const significantPattern = detectedPatterns.find(p => p.confidence > 75);
-      if (significantPattern) {
-        toast({
-          title: `${significantPattern.bullish ? 'Bullish' : 'Bearish'} ${significantPattern.name} Detected`,
-          description: `${significantPattern.description} (${significantPattern.timeframe})`,
-          variant: "default",
-        });
+    const fetchData = async () => {
+      setLoading(true);
+      setError(null);
+      
+      try {
+        let data: CandleData[] = [];
+        
+        if (usingLiveData) {
+          // Try to fetch live data first
+          try {
+            data = await fetchCandleData(symbol, timeframe);
+            if (!data || data.length === 0) throw new Error("No live data available");
+          } catch (error) {
+            console.error("Error fetching live candle data:", error);
+            // Fallback to mock data
+            data = getCandleData(symbol, timeframe);
+            toast({
+              title: "Using Mock Chart Data",
+              description: "Could not fetch live chart data. Using demo data instead.",
+              variant: "destructive",
+            });
+          }
+        } else {
+          // Use mock data directly
+          data = getCandleData(symbol, timeframe);
+        }
+        
+        setChartData(data);
+        
+        const detectedPatterns = analyzeTechnicalPatterns(symbol, data, timeframe);
+        setPatterns(detectedPatterns);
+        
+        if (detectedPatterns.length > 0) {
+          const significantPattern = detectedPatterns.find(p => p.confidence > 75);
+          if (significantPattern) {
+            toast({
+              title: `${significantPattern.bullish ? 'Bullish' : 'Bearish'} ${significantPattern.name} Detected`,
+              description: `${significantPattern.description} (${significantPattern.timeframe})`,
+              variant: "default",
+            });
+          }
+        }
+      } catch (error) {
+        console.error("Error loading chart data:", error);
+        setError("Failed to load chart data");
+        // Ensure we have empty chart data to prevent rendering errors
+        setChartData([]);
+      } finally {
+        setLoading(false);
       }
-    }
-  }, [symbol, timeframe]);
+    };
+    
+    fetchData();
+  }, [symbol, timeframe, usingLiveData]);
 
   const handleTimeframeChange = (newTimeframe: string) => {
     setTimeframe(newTimeframe);
@@ -155,7 +197,7 @@ const MarketChart: React.FC<MarketChartProps> = ({
       case "5m": return "5 Minutes";
       case "15m": return "15 Minutes";
       case "1H": return "1 Hour";
-      case "4H": return "4 Hours";
+      case "4H": return "4 Hour";
       case "1D": return "1 Day";
       case "1W": return "1 Week";
       case "1M": return "1 Month";
@@ -167,7 +209,10 @@ const MarketChart: React.FC<MarketChartProps> = ({
     <Card className="glass w-full transition-all duration-300 animate-slide-up overflow-hidden">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <div>
-          <CardTitle className="text-xl font-semibold">{symbol} <span className="text-muted-foreground text-sm ml-1">{name}</span></CardTitle>
+          <CardTitle className="text-xl font-semibold">
+            {symbol} <span className="text-muted-foreground text-sm ml-1">{name}</span>
+            {usingLiveData && <Badge variant="outline" className="ml-2 text-xs">Live</Badge>}
+          </CardTitle>
           <div className="flex items-center mt-1">
             <span className="text-2xl font-bold mr-2">{formatPrice(price)}</span>
             <Badge 
