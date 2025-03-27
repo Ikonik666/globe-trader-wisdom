@@ -20,9 +20,9 @@ const getApiKey = (): string => {
 // Fetch current price data for a symbol
 export async function fetchCurrentPrice(symbol: string): Promise<{ price: number; change: number; changePercent: number }> {
   try {
-    const API_KEY = getApiKey();
+    const apiKey = getApiKey();
     // For stocks and forex
-    const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${API_KEY}`;
+    const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${apiKey}`;
     const response = await fetch(url);
     const data = await response.json();
     
@@ -48,8 +48,9 @@ export async function fetchCryptoPrice(symbol: string): Promise<{ price: number;
   try {
     // Extract the crypto symbol (e.g., BTC from BTCUSD)
     const cryptoSymbol = symbol.replace('USD', '');
+    const apiKey = getApiKey();
     
-    const url = `https://www.alphavantage.co/query?function=DIGITAL_CURRENCY_DAILY&symbol=${cryptoSymbol}&market=USD&apikey=${API_KEY}`;
+    const url = `https://www.alphavantage.co/query?function=DIGITAL_CURRENCY_DAILY&symbol=${cryptoSymbol}&market=USD&apikey=${apiKey}`;
     const response = await fetch(url);
     const data = await response.json();
     
@@ -146,6 +147,7 @@ function getSymbolsForMarketType(marketType: MarketType) {
 export async function fetchCandleData(symbol: string, timeframe: string): Promise<CandleData[]> {
   try {
     let interval = "5min"; // Default interval
+    const apiKey = getApiKey();
     
     // Map timeframe to Alpha Vantage interval
     switch (timeframe) {
@@ -165,19 +167,19 @@ export async function fetchCandleData(symbol: string, timeframe: string): Promis
     if (isCrypto && ["daily", "weekly", "monthly"].includes(interval)) {
       // For crypto daily, weekly, monthly
       const cryptoSymbol = symbol.replace('USD', '');
-      url = `https://www.alphavantage.co/query?function=DIGITAL_CURRENCY_${interval.toUpperCase()}&symbol=${cryptoSymbol}&market=USD&apikey=${API_KEY}`;
+      url = `https://www.alphavantage.co/query?function=DIGITAL_CURRENCY_${interval.toUpperCase()}&symbol=${cryptoSymbol}&market=USD&apikey=${apiKey}`;
     } else if (isCrypto) {
       // For crypto intraday
       const cryptoSymbol = symbol.replace('USD', '');
-      url = `https://www.alphavantage.co/query?function=CRYPTO_INTRADAY&symbol=${cryptoSymbol}&market=USD&interval=${interval}&apikey=${API_KEY}`;
+      url = `https://www.alphavantage.co/query?function=CRYPTO_INTRADAY&symbol=${cryptoSymbol}&market=USD&interval=${interval}&apikey=${apiKey}`;
     } else if (["daily", "weekly", "monthly"].includes(interval)) {
       // For stocks/forex daily, weekly, monthly
       const func = interval === "daily" ? "TIME_SERIES_DAILY" : 
                     interval === "weekly" ? "TIME_SERIES_WEEKLY" : "TIME_SERIES_MONTHLY";
-      url = `https://www.alphavantage.co/query?function=${func}&symbol=${symbol}&apikey=${API_KEY}`;
+      url = `https://www.alphavantage.co/query?function=${func}&symbol=${symbol}&apikey=${apiKey}`;
     } else {
       // For stocks/forex intraday
-      url = `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${symbol}&interval=${interval}&apikey=${API_KEY}`;
+      url = `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${symbol}&interval=${interval}&apikey=${apiKey}`;
     }
     
     const response = await fetch(url);
@@ -241,8 +243,9 @@ export async function fetchCandleData(symbol: string, timeframe: string): Promis
 // Fetch fundamental data (simplified version with some mock data where API doesn't provide)
 export async function fetchFundamentalData(symbol: string): Promise<FundamentalData> {
   try {
+    const apiKey = getApiKey();
     // For stocks, get overview
-    const url = `https://www.alphavantage.co/query?function=OVERVIEW&symbol=${symbol}&apikey=${API_KEY}`;
+    const url = `https://www.alphavantage.co/query?function=OVERVIEW&symbol=${symbol}&apikey=${apiKey}`;
     const response = await fetch(url);
     const data = await response.json();
     
