@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { LineChart, Line, AreaChart, Area, BarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { CandleData, getCandleData } from '@/utils/marketData';
-import { fetchCandleData } from '@/utils/alphaVantageApi';
+import { fetchCandleData as fetchAlphaVantageCandleData } from '@/utils/alphaVantageApi';
+import { fetchCandleData as fetchTradermadeCandleData } from '@/utils/tradermadeApi';
 import { PatternDetection, analyzeTechnicalPatterns } from '@/utils/analysis';
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/components/ui/use-toast";
@@ -21,6 +22,7 @@ interface MarketChartProps {
   onTimeframeChange?: (timeframe: string) => void;
   currentTimeframe?: string;
   usingLiveData?: boolean;
+  apiService?: string;
 }
 
 const MarketChart: React.FC<MarketChartProps> = ({ 
@@ -31,7 +33,8 @@ const MarketChart: React.FC<MarketChartProps> = ({
   changePercent,
   onTimeframeChange,
   currentTimeframe = "1D",
-  usingLiveData = false
+  usingLiveData = false,
+  apiService = "tradermade"
 }) => {
   const [timeframe, setTimeframe] = useState(currentTimeframe);
   const [chartType, setChartType] = useState("candle");
@@ -60,9 +63,10 @@ const MarketChart: React.FC<MarketChartProps> = ({
         let data: CandleData[] = [];
         
         if (usingLiveData) {
-          // Try to fetch live data first
+          // Try to fetch live data first based on the selected API service
           try {
-            data = await fetchCandleData(symbol, timeframe);
+            const fetchFn = apiService === "tradermade" ? fetchTradermadeCandleData : fetchAlphaVantageCandleData;
+            data = await fetchFn(symbol, timeframe);
             if (!data || data.length === 0) throw new Error("No live data available");
           } catch (error) {
             console.error("Error fetching live candle data:", error);
@@ -105,7 +109,7 @@ const MarketChart: React.FC<MarketChartProps> = ({
     };
     
     fetchData();
-  }, [symbol, timeframe, usingLiveData]);
+  }, [symbol, timeframe, usingLiveData, apiService]);
 
   const handleTimeframeChange = (newTimeframe: string) => {
     setTimeframe(newTimeframe);
@@ -211,7 +215,11 @@ const MarketChart: React.FC<MarketChartProps> = ({
         <div>
           <CardTitle className="text-xl font-semibold">
             {symbol} <span className="text-muted-foreground text-sm ml-1">{name}</span>
-            {usingLiveData && <Badge variant="outline" className="ml-2 text-xs">Live</Badge>}
+            {usingLiveData && (
+              <Badge variant="outline" className="ml-2 text-xs">
+                {apiService === "tradermade" ? "TraderMade" : "Alpha Vantage"} Live
+              </Badge>
+            )}
           </CardTitle>
           <div className="flex items-center mt-1">
             <span className="text-2xl font-bold mr-2">{formatPrice(price)}</span>

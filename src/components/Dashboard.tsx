@@ -9,7 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { getMarketData, getFundamentalData, getNewsData, MarketData } from '@/utils/marketData';
 import { generateSignal, AnalysisResult } from '@/utils/analysis';
 import { getCandleData } from '@/utils/marketData';
-import { fetchMarketData, fetchCandleData, fetchFundamentalData } from '@/utils/alphaVantageApi';
+import { fetchMarketData as fetchAlphaVantageMarketData, fetchCandleData as fetchAlphaVantageCandleData, fetchFundamentalData as fetchAlphaVantageFundamentalData } from '@/utils/alphaVantageApi';
+import { fetchMarketData as fetchTradermadeMarketData, fetchCandleData as fetchTradermadeCandleData, fetchFundamentalData as fetchTradermadeFundamentalData } from '@/utils/tradermadeApi';
 import SignalCard from './SignalCard';
 import MarketChart from './MarketChart';
 import FundamentalData from './FundamentalData';
@@ -18,29 +19,34 @@ import { toast } from "@/components/ui/use-toast";
 import { Search, RefreshCcw, ArrowDownUp, Bitcoin, DollarSign, BarChart, TrendingUp, AlertTriangle, Info } from 'lucide-react';
 import { MarketType, getSymbolsByMarketType } from '@/utils/marketSymbols';
 
-const Dashboard: React.FC = () => {
+interface DashboardProps {
+  apiService?: string;
+}
+
+const Dashboard: React.FC<DashboardProps> = ({ apiService = "tradermade" }) => {
   const [markets, setMarkets] = useState<MarketData[]>([]);
-  const [activeSymbol, setActiveSymbol] = useState<string>("AAPL");
+  const [activeSymbol, setActiveSymbol] = useState<string>("EURUSD");
   const [searchTerm, setSearchTerm] = useState('');
   const [signal, setSignal] = useState<AnalysisResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [marketType, setMarketType] = useState<MarketType>("stocks");
+  const [marketType, setMarketType] = useState<MarketType>("forex");
   const [currentTimeframe, setCurrentTimeframe] = useState("1D");
   const [usingLiveData, setUsingLiveData] = useState(false);
   const [rateLimited, setRateLimited] = useState(false);
   
   useEffect(() => {
     loadMarketData(marketType);
-  }, []);
+  }, [apiService]);
 
   const loadMarketData = async (type: MarketType) => {
     setLoading(true);
     setLoadError(null);
     
     try {
-      // Try to use Alpha Vantage API first
-      const data = await fetchMarketData(type);
+      // Use the appropriate API service
+      const fetchFn = apiService === "tradermade" ? fetchTradermadeMarketData : fetchAlphaVantageMarketData;
+      const data = await fetchFn(type);
       
       if (data && data.length > 0) {
         setMarkets(data);
@@ -48,13 +54,20 @@ const Dashboard: React.FC = () => {
         setRateLimited(false);
         
         // Set initial symbol based on market type
-        const initialSymbol = type === "crypto" ? "BTCUSD" : data[0].symbol;
+        let initialSymbol;
+        if (type === "crypto") {
+          initialSymbol = "BTCUSD";
+        } else if (type === "forex") {
+          initialSymbol = "EURUSD";
+        } else {
+          initialSymbol = data[0].symbol;
+        }
         setActiveSymbol(initialSymbol);
         generateSignalForSymbol(initialSymbol, data, currentTimeframe);
         
         toast({
           title: "Live Data Loaded",
-          description: "Using real-time market data from Alpha Vantage.",
+          description: `Using real-time market data from ${apiService === "tradermade" ? "TraderMade" : "Alpha Vantage"}.`,
         });
       } else {
         throw new Error("No data returned from API");
@@ -65,11 +78,11 @@ const Dashboard: React.FC = () => {
       // Check if it's a rate limit error
       if (error instanceof Error && error.message.includes("rate limit")) {
         setRateLimited(true);
-        setLoadError("API rate limit reached. Using demo data instead. Please try again later or upgrade your API plan.");
+        setLoadError(`${apiService === "tradermade" ? "TraderMade" : "Alpha Vantage"} API rate limit reached. Using demo data instead. Please try again later or upgrade your API plan.`);
         
         toast({
           title: "API Rate Limit Reached",
-          description: "Alpha Vantage limits free accounts to 25 requests per day. Using demo data instead.",
+          description: `${apiService === "tradermade" ? "TraderMade" : "Alpha Vantage"} API rate limit reached. Using demo data instead.`,
           variant: "destructive",
         });
       } else {
@@ -88,7 +101,14 @@ const Dashboard: React.FC = () => {
       setUsingLiveData(false);
       
       // Set initial symbol based on market type
-      const initialSymbol = type === "crypto" ? "BTCUSD" : mockData[0].symbol;
+      let initialSymbol;
+      if (type === "crypto") {
+        initialSymbol = "BTCUSD";
+      } else if (type === "forex") {
+        initialSymbol = "EURUSD";
+      } else {
+        initialSymbol = mockData[0].symbol;
+      }
       setActiveSymbol(initialSymbol);
       generateSignalForSymbol(initialSymbol, mockData, currentTimeframe);
     } finally {
@@ -114,21 +134,24 @@ const Dashboard: React.FC = () => {
       let fundamentalData;
       
       if (usingLiveData && !rateLimited) {
-        // Try to use live data
+        // Try to use live data based on selected API service
         try {
-          candles = await fetchCandleData(symbol, timeframe);
-          fundamentalData = await fetchFundamentalData(symbol);
+          const fetchCandleFn = apiService === "tradermade" ? fetchTradermadeCandleData : fetchAlphaVantageCandleData;
+          const fetchFundamentalFn = apiService === "tradermade" ? fetchTradermadeFundamentalData : fetchAlphaVantageFundamentalData;
+          
+          candles = await fetchCandleFn(symbol, timeframe);
+          fundamentalData = await fetchFundamentalFn(symbol);
         } catch (error) {
           console.error("Error fetching live data:", error);
           
           // Check if it's a rate limit error
           if (error instanceof Error && error.message.includes("rate limit")) {
             setRateLimited(true);
-            setLoadError("API rate limit reached. Using demo data for charts. Please try again later or upgrade your API plan.");
+            setLoadError(`${apiService === "tradermade" ? "TraderMade" : "Alpha Vantage"} API rate limit reached. Using demo data for charts. Please try again later or upgrade your API plan.`);
             
             toast({
               title: "API Rate Limit Reached",
-              description: "Using demo data for charts now. The free API allows only 25 requests per day.",
+              description: `Using demo data for charts now. The ${apiService === "tradermade" ? "TraderMade" : "Alpha Vantage"} API rate limit has been reached.`,
               variant: "destructive",
             });
           } else {
@@ -224,7 +247,9 @@ const Dashboard: React.FC = () => {
               rateLimited ? (
                 <Badge variant="outline" className="ml-2 bg-yellow-100 text-yellow-800">API Rate Limited</Badge>
               ) : (
-                <Badge variant="outline" className="ml-2">Live Data</Badge>
+                <Badge variant="outline" className="ml-2">
+                  {apiService === "tradermade" ? "TraderMade" : "Alpha Vantage"} Live Data
+                </Badge>
               )
             ) : (
               <Badge variant="outline" className="ml-2 bg-yellow-100 text-yellow-800">Demo Data</Badge>
@@ -239,7 +264,11 @@ const Dashboard: React.FC = () => {
           {rateLimited && (
             <div className="flex items-center text-xs text-muted-foreground mt-1 max-w-md">
               <Info className="h-3 w-3 mr-1 flex-shrink-0" />
-              <span>Alpha Vantage free tier is limited to 25 API calls per day. Consider upgrading your API key for more requests.</span>
+              <span>
+                {apiService === "tradermade" ? 
+                  "TraderMade free tier has limited API calls. Consider upgrading your API key for more requests." :
+                  "Alpha Vantage free tier is limited to 25 API calls per day. Consider upgrading your API key for more requests."}
+              </span>
             </div>
           )}
         </div>
