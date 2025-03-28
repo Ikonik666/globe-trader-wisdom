@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -23,7 +24,7 @@ const AiAnalysisCard: React.FC<AiAnalysisCardProps> = ({
     <Card>
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className="text-md font-medium">
-          Deepseek AI Analysis
+          Gemini AI Analysis
           {result && (
             <Badge 
               variant={result.signal.includes('buy') ? "default" : 

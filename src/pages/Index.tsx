@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import Layout from '@/components/Layout';
 import Dashboard from '@/components/Dashboard';
@@ -11,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 const Index = () => {
   const [alphaVantageApiKey, setAlphaVantageApiKey] = useState<string | null>(null);
   const [tradermadeApiKey, setTradermadeApiKey] = useState<string | null>(null);
-  const [deepseekApiKey, setDeepseekApiKey] = useState<string | null>(null);
+  const [geminiApiKey, setGeminiApiKey] = useState<string | null>(null);
   const [currentApiService, setCurrentApiService] = useState<string>("tradermade");
   
   const handleAlphaVantageApiKeySubmit = (key: string) => {
@@ -30,14 +31,14 @@ const Index = () => {
     window.location.reload(); // Reload to apply new API key
   };
   
-  const handleDeepseekApiKeySubmit = (key: string) => {
-    setDeepseekApiKey(key);
+  const handleGeminiApiKeySubmit = (key: string) => {
+    setGeminiApiKey(key);
     // Update the global API_KEY variable in the window object
-    (window as any).DEEPSEEK_API_KEY = key;
-    localStorage.setItem('deepseekApiKey', key);
+    (window as any).GEMINI_API_KEY = key;
+    localStorage.setItem('geminiApiKey', key);
     toast({
-      title: "Deepseek API Key Saved",
-      description: "Your Deepseek API key has been saved for AI analysis"
+      title: "Gemini API Key Saved",
+      description: "Your Gemini API key has been saved for AI analysis"
     });
   };
   
@@ -66,15 +67,15 @@ const Index = () => {
       localStorage.setItem('tradermadeApiKey', "cRoPhAnRp4zUx-7pPW7j");
     }
     
-    const storedDeepseekApiKey = localStorage.getItem('deepseekApiKey');
-    if (storedDeepseekApiKey) {
-      setDeepseekApiKey(storedDeepseekApiKey);
-      (window as any).DEEPSEEK_API_KEY = storedDeepseekApiKey;
+    const storedGeminiApiKey = localStorage.getItem('geminiApiKey');
+    if (storedGeminiApiKey) {
+      setGeminiApiKey(storedGeminiApiKey);
+      (window as any).GEMINI_API_KEY = storedGeminiApiKey;
     } else {
-      // Set default Deepseek API key
-      setDeepseekApiKey("sk-2f6e58af385d4ca3919269b02b890a34");
-      (window as any).DEEPSEEK_API_KEY = "sk-2f6e58af385d4ca3919269b02b890a34";
-      localStorage.setItem('deepseekApiKey', "sk-2f6e58af385d4ca3919269b02b890a34");
+      // Set default Gemini API key
+      setGeminiApiKey("AIzaSyBFaOl5ymCaUK9G0cfHwZSsOZnAvvHbTqQ");
+      (window as any).GEMINI_API_KEY = "AIzaSyBFaOl5ymCaUK9G0cfHwZSsOZnAvvHbTqQ";
+      localStorage.setItem('geminiApiKey', "AIzaSyBFaOl5ymCaUK9G0cfHwZSsOZnAvvHbTqQ");
     }
     
     // Check which API service to use
@@ -116,9 +117,9 @@ const Index = () => {
             )}
             
             <ApiKeyInput 
-              onApiKeySubmit={handleDeepseekApiKeySubmit}
-              apiKeyLabel="Deepseek AI API Key"
-              initialValue={deepseekApiKey || ""}
+              onApiKeySubmit={handleGeminiApiKeySubmit}
+              apiKeyLabel="Gemini AI API Key"
+              initialValue={geminiApiKey || ""}
             />
           </div>
         </div>
@@ -143,7 +144,7 @@ const Index = () => {
           </Alert>
         )}
         
-        <Dashboard apiService={currentApiService} deepseekApiKey={deepseekApiKey} />
+        <Dashboard apiService={currentApiService} geminiApiKey={geminiApiKey} />
       </div>
       <Toaster />
     </Layout>
