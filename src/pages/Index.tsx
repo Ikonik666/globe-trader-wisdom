@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 const Index = () => {
   const [alphaVantageApiKey, setAlphaVantageApiKey] = useState<string | null>(null);
   const [tradermadeApiKey, setTradermadeApiKey] = useState<string | null>(null);
+  const [deepseekApiKey, setDeepseekApiKey] = useState<string | null>(null);
   const [currentApiService, setCurrentApiService] = useState<string>("tradermade");
   
   // When the API key is submitted, update global variable
@@ -28,6 +29,17 @@ const Index = () => {
     (window as any).TRADERMADE_API_KEY = key;
     localStorage.setItem('tradermadeApiKey', key);
     window.location.reload(); // Reload to apply new API key
+  };
+  
+  const handleDeepseekApiKeySubmit = (key: string) => {
+    setDeepseekApiKey(key);
+    // Update the global API_KEY variable in the window object
+    (window as any).DEEPSEEK_API_KEY = key;
+    localStorage.setItem('deepseekApiKey', key);
+    toast({
+      title: "Deepseek API Key Saved",
+      description: "Your Deepseek API key has been saved for AI analysis"
+    });
   };
   
   const handleApiServiceChange = (value: string) => {
@@ -55,6 +67,17 @@ const Index = () => {
       localStorage.setItem('tradermadeApiKey', "cRoPhAnRp4zUx-7pPW7j");
     }
     
+    const storedDeepseekApiKey = localStorage.getItem('deepseekApiKey');
+    if (storedDeepseekApiKey) {
+      setDeepseekApiKey(storedDeepseekApiKey);
+      (window as any).DEEPSEEK_API_KEY = storedDeepseekApiKey;
+    } else {
+      // Set default Deepseek API key
+      setDeepseekApiKey("sk-2f6e58af385d4ca3919269b02b890a34");
+      (window as any).DEEPSEEK_API_KEY = "sk-2f6e58af385d4ca3919269b02b890a34";
+      localStorage.setItem('deepseekApiKey', "sk-2f6e58af385d4ca3919269b02b890a34");
+    }
+    
     // Check which API service to use
     const storedApiService = localStorage.getItem('currentApiService');
     if (storedApiService) {
@@ -78,7 +101,7 @@ const Index = () => {
             </TabsList>
           </Tabs>
           
-          <div className="flex justify-end mt-2 sm:mt-0">
+          <div className="flex justify-end mt-2 sm:mt-0 space-x-2">
             {currentApiService === "tradermade" ? (
               <ApiKeyInput 
                 onApiKeySubmit={handleTradermadeApiKeySubmit} 
@@ -92,6 +115,12 @@ const Index = () => {
                 initialValue={alphaVantageApiKey || ""}
               />
             )}
+            
+            <ApiKeyInput 
+              onApiKeySubmit={handleDeepseekApiKeySubmit}
+              apiKeyLabel="Deepseek AI API Key"
+              initialValue={deepseekApiKey || ""}
+            />
           </div>
         </div>
         
@@ -115,7 +144,7 @@ const Index = () => {
           </Alert>
         )}
         
-        <Dashboard apiService={currentApiService} />
+        <Dashboard apiService={currentApiService} deepseekApiKey={deepseekApiKey} />
       </div>
       <Toaster />
     </Layout>
