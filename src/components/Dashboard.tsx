@@ -21,6 +21,7 @@ import { MarketType, getSymbolsByMarketType } from '@/utils/marketSymbols';
 
 interface DashboardProps {
   apiService?: string;
+  deepseekApiKey?: string | null;
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ apiService = "tradermade" }) => {

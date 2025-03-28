@@ -1,9 +1,9 @@
-
 import React, { useState, useEffect } from 'react';
 import Layout from '@/components/Layout';
 import Dashboard from '@/components/Dashboard';
 import ApiKeyInput from '@/components/ApiKeyInput';
 import { Toaster } from "@/components/ui/toaster";
+import { toast } from "@/components/ui/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { InfoIcon } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -14,7 +14,6 @@ const Index = () => {
   const [deepseekApiKey, setDeepseekApiKey] = useState<string | null>(null);
   const [currentApiService, setCurrentApiService] = useState<string>("tradermade");
   
-  // When the API key is submitted, update global variable
   const handleAlphaVantageApiKeySubmit = (key: string) => {
     setAlphaVantageApiKey(key);
     // Update the global API_KEY variable in the window object
