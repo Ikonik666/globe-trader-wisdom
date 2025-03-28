@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -21,10 +20,10 @@ import { MarketType, getSymbolsByMarketType } from '@/utils/marketSymbols';
 
 interface DashboardProps {
   apiService?: string;
-  deepseekApiKey?: string | null;
+  geminiApiKey?: string | null;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ apiService = "tradermade" }) => {
+const Dashboard: React.FC<DashboardProps> = ({ apiService = "tradermade", geminiApiKey }) => {
   const [markets, setMarkets] = useState<MarketData[]>([]);
   const [activeSymbol, setActiveSymbol] = useState<string>("EURUSD");
   const [searchTerm, setSearchTerm] = useState('');
@@ -45,7 +44,6 @@ const Dashboard: React.FC<DashboardProps> = ({ apiService = "tradermade" }) => {
     setLoadError(null);
     
     try {
-      // Use the appropriate API service
       const fetchFn = apiService === "tradermade" ? fetchTradermadeMarketData : fetchAlphaVantageMarketData;
       const data = await fetchFn(type);
       
@@ -54,7 +52,6 @@ const Dashboard: React.FC<DashboardProps> = ({ apiService = "tradermade" }) => {
         setUsingLiveData(true);
         setRateLimited(false);
         
-        // Set initial symbol based on market type
         let initialSymbol;
         if (type === "crypto") {
           initialSymbol = "BTCUSD";
@@ -76,7 +73,6 @@ const Dashboard: React.FC<DashboardProps> = ({ apiService = "tradermade" }) => {
     } catch (error) {
       console.error("Error loading market data:", error);
       
-      // Check if it's a rate limit error
       if (error instanceof Error && error.message.includes("rate limit")) {
         setRateLimited(true);
         setLoadError(`${apiService === "tradermade" ? "TraderMade" : "Alpha Vantage"} API rate limit reached. Using demo data instead. Please try again later or upgrade your API plan.`);
@@ -96,12 +92,10 @@ const Dashboard: React.FC<DashboardProps> = ({ apiService = "tradermade" }) => {
         });
       }
       
-      // Fallback to mock data
       const mockData = getMarketData(type);
       setMarkets(mockData);
       setUsingLiveData(false);
       
-      // Set initial symbol based on market type
       let initialSymbol;
       if (type === "crypto") {
         initialSymbol = "BTCUSD";
@@ -135,7 +129,6 @@ const Dashboard: React.FC<DashboardProps> = ({ apiService = "tradermade" }) => {
       let fundamentalData;
       
       if (usingLiveData && !rateLimited) {
-        // Try to use live data based on selected API service
         try {
           const fetchCandleFn = apiService === "tradermade" ? fetchTradermadeCandleData : fetchAlphaVantageCandleData;
           const fetchFundamentalFn = apiService === "tradermade" ? fetchTradermadeFundamentalData : fetchAlphaVantageFundamentalData;
@@ -145,7 +138,6 @@ const Dashboard: React.FC<DashboardProps> = ({ apiService = "tradermade" }) => {
         } catch (error) {
           console.error("Error fetching live data:", error);
           
-          // Check if it's a rate limit error
           if (error instanceof Error && error.message.includes("rate limit")) {
             setRateLimited(true);
             setLoadError(`${apiService === "tradermade" ? "TraderMade" : "Alpha Vantage"} API rate limit reached. Using demo data for charts. Please try again later or upgrade your API plan.`);
@@ -163,17 +155,15 @@ const Dashboard: React.FC<DashboardProps> = ({ apiService = "tradermade" }) => {
             });
           }
           
-          // Fallback to mock data
           candles = getCandleData(symbol, timeframe);
           fundamentalData = getFundamentalData(symbol);
         }
       } else {
-        // Use mock data
         candles = getCandleData(symbol, timeframe);
         fundamentalData = getFundamentalData(symbol);
       }
       
-      const newsData = getNewsData(); // Always using mock news data for now
+      const newsData = getNewsData();
       
       const generatedSignal = generateSignal(
         symbol,
